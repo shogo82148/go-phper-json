@@ -171,6 +171,7 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			out.SetBool(v)
 		case reflect.Interface:
 			if out.NumMethod() == 0 {
+				out.Set(reflect.ValueOf(v))
 			} else {
 				return dec.withErrorContext(&UnmarshalTypeError{Value: "bool", Type: out.Type()})
 			}
@@ -207,6 +208,19 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				out.SetFloat(1)
 			} else {
 				out.SetFloat(0)
+			}
+		case reflect.Slice:
+			// PHP flavered http://php.net/manual/en/language.types.array.php#language.types.array.casting
+			// For any of the types integer, float, string, boolean and resource,
+			// converting a value to an array results in an array with a single element with index zero and the value of the scalar which was converted.
+			// In other words, (array)$scalarValue is exactly the same as array($scalarValue).
+			if out.Cap() == 0 {
+				newout := reflect.MakeSlice(out.Type(), 1, 1)
+				out.Set(newout)
+			}
+			out.SetLen(1)
+			if err := dec.decode(v, out.Index(0)); err != nil {
+				return err
 			}
 		}
 	case Number:
@@ -266,6 +280,19 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			} else {
 				out.SetBool(true)
 			}
+		case reflect.Slice:
+			// PHP flavered http://php.net/manual/en/language.types.array.php#language.types.array.casting
+			// For any of the types integer, float, string, boolean and resource,
+			// converting a value to an array results in an array with a single element with index zero and the value of the scalar which was converted.
+			// In other words, (array)$scalarValue is exactly the same as array($scalarValue).
+			if out.Cap() == 0 {
+				newout := reflect.MakeSlice(out.Type(), 1, 1)
+				out.Set(newout)
+			}
+			out.SetLen(1)
+			if err := dec.decode(v, out.Index(0)); err != nil {
+				return err
+			}
 		}
 	case string:
 		switch out.Kind() {
@@ -315,6 +342,19 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				out.SetBool(false)
 			} else {
 				out.SetBool(true)
+			}
+		case reflect.Slice:
+			// PHP flavered http://php.net/manual/en/language.types.array.php#language.types.array.casting
+			// For any of the types integer, float, string, boolean and resource,
+			// converting a value to an array results in an array with a single element with index zero and the value of the scalar which was converted.
+			// In other words, (array)$scalarValue is exactly the same as array($scalarValue).
+			if out.Cap() == 0 {
+				newout := reflect.MakeSlice(out.Type(), 1, 1)
+				out.Set(newout)
+			}
+			out.SetLen(1)
+			if err := dec.decode(v, out.Index(0)); err != nil {
+				return err
 			}
 		}
 	case []interface{}:
@@ -445,6 +485,37 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				out.SetBool(false)
 			} else {
 				out.SetBool(true)
+			}
+		case reflect.Slice:
+			// PHP flavored http://php.net/manual/en/language.types.array.php#language.types.array.casting
+			// check all keys are number, and find the max key.
+			max := -1
+			for key := range v {
+				i, err := strconv.ParseInt(key, 10, 0)
+				if err != nil {
+					return dec.withErrorContext(&UnmarshalTypeError{Value: "number", Type: reflect.TypeOf("")})
+				}
+				if int(i) > max {
+					max = int(i)
+				}
+			}
+			// Grow slice if necessary
+			if max+1 > out.Cap() {
+				newout := reflect.MakeSlice(out.Type(), max+1, max+1)
+				out.Set(newout)
+			} else {
+				// fill zero
+				zero := reflect.Zero(out.Type().Elem())
+				for i := 0; i <= max; i++ {
+					out.Index(i).Set(zero)
+				}
+			}
+			out.SetLen(max + 1)
+			for key, vv := range v {
+				i, _ := strconv.ParseInt(key, 10, 0) // err has been already checked, so no need to check here.
+				if err := dec.decode(vv, out.Index(int(i))); err != nil {
+					return err
+				}
 			}
 		}
 	default:

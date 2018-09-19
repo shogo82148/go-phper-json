@@ -111,6 +111,13 @@ var unmarshalTests = []unmarshalTest{
 	{in: `1.1`, ptr: new(float64), out: 1.1},
 	{in: `true`, ptr: new(float64), out: float64(1)},
 	{in: `false`, ptr: new(float64), out: float64(0)},
+
+	// convert to array
+	{in: `true`, ptr: new([]bool), out: []bool{true}},
+	{in: `1`, ptr: new([]int), out: []int{1}},
+	{in: `1.1`, ptr: new([]float64), out: []float64{1.1}},
+	{in: `"foo"`, ptr: new([]string), out: []string{"foo"}},
+	{in: `{"1":1}`, ptr: new([]int), out: []int{0, 1}},
 }
 
 func TestUnmarshal(t *testing.T) {
