@@ -10,6 +10,8 @@ import (
 	"strconv"
 )
 
+var textUnmarshalerType = reflect.TypeOf(new(encoding.TextUnmarshaler)).Elem()
+
 // Decoder is a wrapper of json.Decoder.
 type Decoder struct {
 	dec                   *json.Decoder
@@ -249,6 +251,30 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				if err := dec.decode(vv, out.Index(i)); err != nil {
 					return err
 				}
+			}
+		}
+	case map[string]interface{}:
+		switch out.Kind() {
+		case reflect.Map:
+			t := out.Type()
+			if t.Key().Kind() == reflect.String && t.Elem().Kind() == reflect.Interface {
+				out.Set(reflect.ValueOf(v))
+				break
+			}
+
+			// Map key must either have string kind, have an integer kind,
+			// or be an encoding.TextUnmarshaler.
+			switch t.Key().Kind() {
+			case reflect.String,
+				reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+				reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+			default:
+				if !reflect.PtrTo(t.Key()).Implements(textUnmarshalerType) {
+					panic("TODO: handle UnmarshalTypeError")
+				}
+			}
+			if out.IsNil() {
+				out.Set(reflect.MakeMap(t))
 			}
 		}
 	default:

@@ -59,8 +59,8 @@ var unmarshalTests = []unmarshalTest{
 	// empty array to interface test
 	{in: `[]`, ptr: new([]interface{}), out: []interface{}{}},
 	{in: `null`, ptr: new([]interface{}), out: []interface{}(nil)},
-	// {in: `{"T":[]}`, ptr: new(map[string]interface{}), out: map[string]interface{}{"T": []interface{}{}}},
-	// {in: `{"T":null}`, ptr: new(map[string]interface{}), out: map[string]interface{}{"T": interface{}(nil)}},
+	{in: `{"T":[]}`, ptr: new(map[string]interface{}), out: map[string]interface{}{"T": []interface{}{}}},
+	{in: `{"T":null}`, ptr: new(map[string]interface{}), out: map[string]interface{}{"T": interface{}(nil)}},
 
 	{in: `1`, ptr: new(string), out: "1"},
 }
