@@ -110,6 +110,10 @@ func (dec *Decoder) Decode(v interface{}) error {
 }
 
 func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
+	if !out.IsValid() {
+		return nil
+	}
+
 	u, ut, pv := indirect(out, in == nil)
 	if u != nil {
 		data, err := json.Marshal(in)
@@ -275,6 +279,43 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			}
 			if out.IsNil() {
 				out.Set(reflect.MakeMap(t))
+			}
+		case reflect.Struct:
+			for key, value := range v {
+				// Figure out field corresponding to key.
+				var subv reflect.Value
+				var f *field
+				fields := cachedTypeFields(out.Type())
+				for i := range fields {
+					ff := &fields[i]
+					if ff.name == key {
+						f = ff
+						break
+					}
+					if f == nil && ff.equalFold(ff.nameBytes, []byte(key)) {
+						f = ff
+					}
+				}
+				if f != nil {
+					subv = out
+					for _, i := range f.index {
+						if subv.Kind() == reflect.Ptr {
+							if subv.IsNil() {
+								if !subv.CanSet() {
+									return fmt.Errorf("phperjson: cannot set embedded pointer to unexported struct: %v", subv.Type().Elem())
+								}
+								subv.Set(reflect.New(subv.Type().Elem()))
+							}
+							subv = subv.Elem()
+						}
+						subv = subv.Field(i)
+					}
+				} else if dec.disallowUnknownFields {
+					return fmt.Errorf("json: unknown field %q", key)
+				}
+				if err := dec.decode(value, subv); err != nil {
+					return err
+				}
 			}
 		}
 	default:
