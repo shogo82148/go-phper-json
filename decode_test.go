@@ -161,6 +161,15 @@ var unmarshalTests = []unmarshalTest{
 	{in: `1`, ptr: new(phpArray), out: phpArray{First: "1"}},
 	{in: `1.1`, ptr: new(phpArray), out: phpArray{First: "1.1"}},
 	{in: `"foo"`, ptr: new(phpArray), out: phpArray{First: "foo"}},
+	{in: `[]`, ptr: new(map[string]interface{}), out: map[string]interface{}{}},
+	{in: `[true]`, ptr: new(map[string]bool), out: map[string]bool{"0": true}},
+	{in: `[1]`, ptr: new(map[string]int), out: map[string]int{"0": 1}},
+	{in: `[1.1]`, ptr: new(map[string]float64), out: map[string]float64{"0": 1.1}},
+	{in: `["foo"]`, ptr: new(map[string]string), out: map[string]string{"0": "foo"}},
+	{in: `[true]`, ptr: new(phpArray), out: phpArray{First: "1"}},
+	{in: `[1]`, ptr: new(phpArray), out: phpArray{First: "1"}},
+	{in: `[1.1]`, ptr: new(phpArray), out: phpArray{First: "1.1"}},
+	{in: `["foo"]`, ptr: new(phpArray), out: phpArray{First: "foo"}},
 }
 
 func TestUnmarshal(t *testing.T) {

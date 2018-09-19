@@ -459,6 +459,110 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			} else {
 				out.SetBool(true)
 			}
+		case reflect.Map:
+			// PHP flavored
+			// PHP doesn's not distinguish JSON arrays from JSON objects.
+			t := out.Type()
+			kt := t.Key()
+			// Map key must either have string kind, have an integer kind,
+			// or be an encoding.TextUnmarshaler.
+			switch kt.Kind() {
+			case reflect.String,
+				reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+				reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+			default:
+				if !reflect.PtrTo(kt).Implements(textUnmarshalerType) {
+					return dec.withErrorContext(&UnmarshalTypeError{Value: "object", Type: out.Type()})
+				}
+			}
+			if out.IsNil() {
+				out.Set(reflect.MakeMap(t))
+			}
+			var mapElem reflect.Value
+			for i, vv := range v {
+				// decode value
+				elemType := out.Type().Elem()
+				if !mapElem.IsValid() {
+					mapElem = reflect.New(elemType).Elem()
+				} else {
+					mapElem.Set(reflect.Zero(elemType))
+				}
+				subv := mapElem
+				if err := dec.decode(vv, subv); err != nil {
+					return err
+				}
+				// decode key
+				var kv reflect.Value
+				switch {
+				case kt.Kind() == reflect.String:
+					kv = reflect.ValueOf(strconv.Itoa(i)).Convert(kt)
+				case reflect.PtrTo(kt).Implements(textUnmarshalerType):
+					kv = reflect.New(kt)
+					if err := dec.decode(strconv.Itoa(i), kv); err != nil {
+						return err
+					}
+					kv = kv.Elem()
+				default:
+					switch kt.Kind() {
+					case reflect.String:
+					case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+						if reflect.Zero(kt).OverflowInt(int64(i)) {
+							return dec.withErrorContext(&UnmarshalTypeError{Value: "number", Type: kt})
+						}
+						kv = reflect.ValueOf(int64(i)).Convert(kt)
+					case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+						if reflect.Zero(kt).OverflowUint(uint64(i)) {
+							return dec.withErrorContext(&UnmarshalTypeError{Value: "number", Type: kt})
+						}
+						kv = reflect.ValueOf(uint64(i)).Convert(kt)
+					default:
+						panic("json: Unexpected key type") // should never occur
+					}
+				}
+				out.SetMapIndex(kv, subv)
+			}
+		case reflect.Struct:
+			// PHP flavored
+			// PHP doesn's not distinguish JSON arrays from JSON objects.
+			for i, value := range v {
+				// Figure out field corresponding to key.
+				key := strconv.Itoa(i)
+				var subv reflect.Value
+				var f *field
+				fields := cachedTypeFields(out.Type())
+				for i := range fields {
+					ff := &fields[i]
+					if ff.name == key {
+						f = ff
+						break
+					}
+				}
+				if f != nil {
+					subv = out
+					for _, i := range f.index {
+						if subv.Kind() == reflect.Ptr {
+							if subv.IsNil() {
+								if !subv.CanSet() {
+									return fmt.Errorf("phperjson: cannot set embedded pointer to unexported struct: %v", subv.Type().Elem())
+								}
+								subv.Set(reflect.New(subv.Type().Elem()))
+							}
+							subv = subv.Elem()
+						}
+						subv = subv.Field(i)
+					}
+					dec.errorContext.Struct = out.Type().Name()
+					dec.errorContext.Field = f.name
+				} else if dec.disallowUnknownFields {
+					return fmt.Errorf("json: unknown field %q", key)
+				}
+				err := dec.decode(value, subv)
+				dec.errorContext.Struct = ""
+				dec.errorContext.Field = ""
+				if err != nil {
+					return err
+				}
+			}
 		}
 	case map[string]interface{}:
 		switch out.Kind() {
@@ -499,23 +603,32 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 					return err
 				}
 				var kv reflect.Value
-				switch kt.Kind() {
-				case reflect.String:
+				switch {
+				case kt.Kind() == reflect.String:
 					kv = reflect.ValueOf(key).Convert(kt)
-				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-					n, err := strconv.ParseInt(key, 10, 64)
-					if err != nil || reflect.Zero(kt).OverflowInt(n) {
-						return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + key, Type: kt})
+				case reflect.PtrTo(kt).Implements(textUnmarshalerType):
+					kv = reflect.New(kt)
+					if err := dec.decode(key, kv); err != nil {
+						return err
 					}
-					kv = reflect.ValueOf(n).Convert(kt)
-				case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-					n, err := strconv.ParseUint(key, 10, 64)
-					if err != nil || reflect.Zero(kt).OverflowUint(n) {
-						return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + key, Type: kt})
-					}
-					kv = reflect.ValueOf(n).Convert(kt)
+					kv = kv.Elem()
 				default:
-					panic("json: Unexpected key type") // should never occur
+					switch kt.Kind() {
+					case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+						n, err := strconv.ParseInt(key, 10, 64)
+						if err != nil || reflect.Zero(kt).OverflowInt(n) {
+							return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + key, Type: kt})
+						}
+						kv = reflect.ValueOf(n).Convert(kt)
+					case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+						n, err := strconv.ParseUint(key, 10, 64)
+						if err != nil || reflect.Zero(kt).OverflowUint(n) {
+							return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + key, Type: kt})
+						}
+						kv = reflect.ValueOf(n).Convert(kt)
+					default:
+						panic("json: Unexpected key type") // should never occur
+					}
 				}
 				out.SetMapIndex(kv, subv)
 			}
