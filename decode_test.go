@@ -138,6 +138,7 @@ var unmarshalTests = []unmarshalTest{
 	{in: `1.1`, ptr: new(int), out: 1},
 	{in: `true`, ptr: new(int), out: 1},
 	{in: `false`, ptr: new(int), out: 0},
+	{in: `""`, ptr: new(int), out: int(0)},
 
 	// convert to floats
 	{in: `"1"`, ptr: new(float64), out: float64(1)},
@@ -145,6 +146,7 @@ var unmarshalTests = []unmarshalTest{
 	{in: `1.1`, ptr: new(float64), out: 1.1},
 	{in: `true`, ptr: new(float64), out: float64(1)},
 	{in: `false`, ptr: new(float64), out: float64(0)},
+	{in: `""`, ptr: new(float64), out: float64(0)},
 
 	// convert to array
 	{in: `true`, ptr: new([]bool), out: []bool{true}},
