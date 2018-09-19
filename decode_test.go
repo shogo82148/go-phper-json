@@ -72,7 +72,14 @@ var unmarshalTests = []unmarshalTest{
 	{in: `{"T":[]}`, ptr: new(map[string]interface{}), out: map[string]interface{}{"T": []interface{}{}}},
 	{in: `{"T":null}`, ptr: new(map[string]interface{}), out: map[string]interface{}{"T": interface{}(nil)}},
 
+	// PHP flavored
+	// convert to string
 	{in: `1`, ptr: new(string), out: "1"},
+	{in: `1.2`, ptr: new(string), out: "1.2"},
+	{in: `-5`, ptr: new(string), out: "-5"},
+	{in: `true`, ptr: new(string), out: "1"},
+	{in: `false`, ptr: new(string), out: ""},
+	{in: `null`, ptr: new(string), out: ""},
 }
 
 func TestUnmarshal(t *testing.T) {

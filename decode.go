@@ -152,7 +152,11 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 		switch out.Kind() {
 		case reflect.Interface, reflect.Ptr, reflect.Map, reflect.Slice:
 			out.Set(reflect.Zero(out.Type()))
-			// otherwise, ignore null for primitives/string
+			// otherwise, ignore null for primitives
+		case reflect.String:
+			// PHP flavored http://php.net/manual/en/language.types.string.php#language.types.string.casting
+			// NULL is always converted to an empty string.
+			out.SetString("")
 		}
 	case bool:
 		switch out.Kind() {
@@ -164,6 +168,16 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			if out.NumMethod() == 0 {
 			} else {
 				return dec.withErrorContext(&UnmarshalTypeError{Value: "bool", Type: out.Type()})
+			}
+		case reflect.String:
+			// PHP flavored http://php.net/manual/en/language.types.string.php#language.types.string.casting
+			// A boolean TRUE value is converted to the string "1".
+			// Boolean FALSE is converted to "" (the empty string).
+			// This allows conversion back and forth between boolean and string values.
+			if v {
+				out.SetString("1")
+			} else {
+				out.SetString("")
 			}
 		}
 	case Number:
