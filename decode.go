@@ -697,7 +697,7 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				}
 			}
 			// Grow slice if necessary
-			if max+1 > out.Cap() {
+			if max < 0 || max+1 > out.Cap() {
 				newout := reflect.MakeSlice(out.Type(), max+1, max+1)
 				out.Set(newout)
 			} else {

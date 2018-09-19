@@ -151,6 +151,7 @@ var unmarshalTests = []unmarshalTest{
 	{in: `1`, ptr: new([]int), out: []int{1}},
 	{in: `1.1`, ptr: new([]float64), out: []float64{1.1}},
 	{in: `"foo"`, ptr: new([]string), out: []string{"foo"}},
+	{in: `{}`, ptr: new([]interface{}), out: []interface{}{}},
 	{in: `{"1":1}`, ptr: new([]int), out: []int{0, 1}},
 	{in: `{"1":1,"3":3}`, ptr: new([3]int), out: [3]int{0, 1, 0}},
 	{in: `true`, ptr: new(map[string]bool), out: map[string]bool{"0": true}},
