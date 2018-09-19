@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding"
 	"encoding/json"
+	"fmt"
 	"io"
-	"log"
 	"reflect"
 	"strconv"
 )
@@ -104,7 +104,6 @@ func (dec *Decoder) Decode(v interface{}) error {
 	if err := dec.dec.Decode(&iv); err != nil {
 		return err
 	}
-	log.Printf("%+v", iv)
 	return dec.decode(iv, reflect.ValueOf(v))
 }
 
@@ -127,6 +126,12 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 
 	out = pv
 	switch v := in.(type) {
+	case nil:
+		switch out.Kind() {
+		case reflect.Interface, reflect.Ptr, reflect.Map, reflect.Slice:
+			out.Set(reflect.Zero(out.Type()))
+			// otherwise, ignore null for primitives/string
+		}
 	case bool:
 		switch out.Kind() {
 		default:
@@ -173,8 +178,35 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			}
 			out.SetFloat(n)
 		}
+	case string:
+		switch out.Kind() {
+		default:
+			panic("TODO: handle UnmarshalTypeError")
+		case reflect.String:
+			out.SetString(v)
+		case reflect.Interface:
+			out.Set(reflect.ValueOf(v))
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			n, err := strconv.ParseInt(string(v), 10, 64)
+			if err != nil || out.OverflowInt(n) {
+				panic("TODO: handle UnmarshalTypeError")
+			}
+			out.SetInt(n)
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+			n, err := strconv.ParseUint(string(v), 10, 64)
+			if err != nil || out.OverflowUint(n) {
+				panic("TODO: handle UnmarshalTypeError")
+			}
+			out.SetUint(n)
+		case reflect.Float32, reflect.Float64:
+			n, err := strconv.ParseFloat(string(v), out.Type().Bits())
+			if err != nil || out.OverflowFloat(n) {
+				panic("TODO: handle UnmarshalTypeError")
+			}
+			out.SetFloat(n)
+		}
 	default:
-		panic("unkown type: " + reflect.TypeOf(v).String())
+		panic(fmt.Sprintf("unkown type: %v", reflect.TypeOf(v)))
 	}
 	return nil
 }
