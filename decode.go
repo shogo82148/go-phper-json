@@ -195,6 +195,14 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			} else {
 				out.SetUint(0)
 			}
+		case reflect.Float32, reflect.Float64:
+			// PHP flavored http://php.net/manual/en/language.types.float.php#language.types.float.casting
+			// FALSE will yield 0 (zero), and TRUE will yield 1 (one).
+			if v {
+				out.SetFloat(1)
+			} else {
+				out.SetFloat(0)
+			}
 		}
 	case Number:
 		switch out.Kind() {
