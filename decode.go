@@ -221,9 +221,17 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				// Ran out of fixed array: skip.
 				l = out.Len()
 			}
-			for i := 0; i < l; i++ {
+			var i int
+			for i = 0; i < l; i++ {
 				if err := dec.decode(v[i], out.Index(i)); err != nil {
 					return err
+				}
+			}
+			if i < out.Len() {
+				// Zero the rest.
+				zero := reflect.Zero(out.Type().Elem())
+				for ; i < out.Len(); i++ {
+					out.Index(i).Set(zero)
 				}
 			}
 		case reflect.Slice:
