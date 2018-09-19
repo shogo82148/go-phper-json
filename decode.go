@@ -414,6 +414,8 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 		}
 	case map[string]interface{}:
 		switch out.Kind() {
+		default:
+			return dec.withErrorContext(&UnmarshalTypeError{Value: "object", Type: out.Type()})
 		case reflect.Map:
 			t := out.Type()
 			if t.Key().Kind() == reflect.String && t.Elem().Kind() == reflect.Interface {
@@ -513,6 +515,26 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			out.SetLen(max + 1)
 			for key, vv := range v {
 				i, _ := strconv.ParseInt(key, 10, 0) // err has been already checked, so no need to check here.
+				if err := dec.decode(vv, out.Index(int(i))); err != nil {
+					return err
+				}
+			}
+		case reflect.Array:
+			// PHP flavored http://php.net/manual/en/language.types.array.php#language.types.array.casting
+			// fill zero
+			zero := reflect.Zero(out.Type().Elem())
+			for i := 0; i < out.Len(); i++ {
+				out.Index(i).Set(zero)
+			}
+
+			for key, vv := range v {
+				i, err := strconv.ParseInt(key, 10, 0)
+				if err != nil {
+					return dec.withErrorContext(&UnmarshalTypeError{Value: "number", Type: reflect.TypeOf("")})
+				}
+				if int(i) >= out.Len() {
+					continue
+				}
 				if err := dec.decode(vv, out.Index(int(i))); err != nil {
 					return err
 				}
