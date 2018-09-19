@@ -21,6 +21,7 @@ type unmarshalTest struct {
 }
 
 var unmarshalTests = []unmarshalTest{
+	// test compatiblity with encoding/json
 	// basic types
 	{in: `true`, ptr: new(bool), out: true},
 	{in: `1`, ptr: new(int), out: 1},
@@ -54,6 +55,12 @@ var unmarshalTests = []unmarshalTest{
 	{in: `[1, 2, 3]`, ptr: new([3]int), out: [3]int{1, 2, 3}},
 	{in: `[1, 2, 3]`, ptr: new([1]int), out: [1]int{1}},
 	{in: `[1, 2, 3]`, ptr: new([5]int), out: [5]int{1, 2, 3, 0, 0}},
+
+	// empty array to interface test
+	{in: `[]`, ptr: new([]interface{}), out: []interface{}{}},
+	{in: `null`, ptr: new([]interface{}), out: []interface{}(nil)},
+	// {in: `{"T":[]}`, ptr: new(map[string]interface{}), out: map[string]interface{}{"T": []interface{}{}}},
+	// {in: `{"T":null}`, ptr: new(map[string]interface{}), out: map[string]interface{}{"T": interface{}(nil)}},
 
 	{in: `1`, ptr: new(string), out: "1"},
 }

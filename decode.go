@@ -209,6 +209,12 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 		switch out.Kind() {
 		default:
 			panic("TODO: handle UnmarshalTypeError")
+		case reflect.Interface:
+			if out.NumMethod() == 0 {
+				out.Set(reflect.ValueOf(v))
+			} else {
+				panic("TODO: handle UnmarshalTypeError")
+			}
 		case reflect.Array:
 			l := len(v)
 			if out.Len() < l {
@@ -221,6 +227,21 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				}
 			}
 		case reflect.Slice:
+			if len(v) == 0 {
+				out.Set(reflect.MakeSlice(out.Type(), 0, 0))
+				break
+			}
+			// Grow slice if necessary
+			if len(v) > out.Cap() {
+				newout := reflect.MakeSlice(out.Type(), len(v), len(v))
+				out.Set(newout)
+			}
+			out.SetLen(len(v))
+			for i, vv := range v {
+				if err := dec.decode(vv, out.Index(i)); err != nil {
+					return err
+				}
+			}
 		}
 	default:
 		panic(fmt.Sprintf("unkown type: %v", reflect.TypeOf(v)))
