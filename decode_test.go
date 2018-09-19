@@ -2,6 +2,7 @@ package phperjson
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"strings"
 	"testing"
@@ -15,6 +16,12 @@ type T struct {
 
 type tx struct {
 	x int
+}
+
+type u8 uint8
+
+type phpArray struct {
+	First string `json:"0"`
 }
 
 type unmarshalTest struct {
@@ -72,6 +79,33 @@ var unmarshalTests = []unmarshalTest{
 	{in: `{"T":[]}`, ptr: new(map[string]interface{}), out: map[string]interface{}{"T": []interface{}{}}},
 	{in: `{"T":null}`, ptr: new(map[string]interface{}), out: map[string]interface{}{"T": interface{}(nil)}},
 
+	// integer-keyed map test
+	{
+		in:  `{"-1":"a","0":"b","1":"c"}`,
+		ptr: new(map[int]string),
+		out: map[int]string{-1: "a", 0: "b", 1: "c"},
+	},
+	{
+		in:  `{"0":"a","10":"c","9":"b"}`,
+		ptr: new(map[u8]string),
+		out: map[u8]string{0: "a", 9: "b", 10: "c"},
+	},
+	{
+		in:  `{"-9223372036854775808":"min","9223372036854775807":"max"}`,
+		ptr: new(map[int64]string),
+		out: map[int64]string{math.MinInt64: "min", math.MaxInt64: "max"},
+	},
+	{
+		in:  `{"18446744073709551615":"max"}`,
+		ptr: new(map[uint64]string),
+		out: map[uint64]string{math.MaxUint64: "max"},
+	},
+	{
+		in:  `{"0":false,"10":true}`,
+		ptr: new(map[uintptr]bool),
+		out: map[uintptr]bool{0: false, 10: true},
+	},
+
 	// PHP flavored
 	// convert to boolean
 	{in: `false`, ptr: new(bool), out: false},
@@ -119,6 +153,14 @@ var unmarshalTests = []unmarshalTest{
 	{in: `"foo"`, ptr: new([]string), out: []string{"foo"}},
 	{in: `{"1":1}`, ptr: new([]int), out: []int{0, 1}},
 	{in: `{"1":1,"3":3}`, ptr: new([3]int), out: [3]int{0, 1, 0}},
+	{in: `true`, ptr: new(map[string]bool), out: map[string]bool{"0": true}},
+	{in: `1`, ptr: new(map[string]int), out: map[string]int{"0": 1}},
+	{in: `1.1`, ptr: new(map[string]float64), out: map[string]float64{"0": 1.1}},
+	{in: `"foo"`, ptr: new(map[string]string), out: map[string]string{"0": "foo"}},
+	{in: `true`, ptr: new(phpArray), out: phpArray{First: "1"}},
+	{in: `1`, ptr: new(phpArray), out: phpArray{First: "1"}},
+	{in: `1.1`, ptr: new(phpArray), out: phpArray{First: "1.1"}},
+	{in: `"foo"`, ptr: new(phpArray), out: phpArray{First: "foo"}},
 }
 
 func TestUnmarshal(t *testing.T) {

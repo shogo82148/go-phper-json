@@ -222,6 +222,22 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			if err := dec.decode(v, out.Index(0)); err != nil {
 				return err
 			}
+		case reflect.Map:
+			// PHP flavered http://php.net/manual/en/language.types.array.php#language.types.array.casting
+			// For any of the types integer, float, string, boolean and resource,
+			// converting a value to an array results in an array with a single element with index zero and the value of the scalar which was converted.
+			// In other words, (array)$scalarValue is exactly the same as array($scalarValue).
+			if err := dec.decode(map[string]interface{}{"0": v}, out); err != nil {
+				return err
+			}
+		case reflect.Struct:
+			// PHP flavered http://php.net/manual/en/language.types.array.php#language.types.array.casting
+			// For any of the types integer, float, string, boolean and resource,
+			// converting a value to an array results in an array with a single element with index zero and the value of the scalar which was converted.
+			// In other words, (array)$scalarValue is exactly the same as array($scalarValue).
+			if err := dec.decode(map[string]interface{}{"0": v}, out); err != nil {
+				return err
+			}
 		}
 	case Number:
 		switch out.Kind() {
@@ -293,6 +309,22 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			if err := dec.decode(v, out.Index(0)); err != nil {
 				return err
 			}
+		case reflect.Map:
+			// PHP flavered http://php.net/manual/en/language.types.array.php#language.types.array.casting
+			// For any of the types integer, float, string, boolean and resource,
+			// converting a value to an array results in an array with a single element with index zero and the value of the scalar which was converted.
+			// In other words, (array)$scalarValue is exactly the same as array($scalarValue).
+			if err := dec.decode(map[string]interface{}{"0": v}, out); err != nil {
+				return err
+			}
+		case reflect.Struct:
+			// PHP flavered http://php.net/manual/en/language.types.array.php#language.types.array.casting
+			// For any of the types integer, float, string, boolean and resource,
+			// converting a value to an array results in an array with a single element with index zero and the value of the scalar which was converted.
+			// In other words, (array)$scalarValue is exactly the same as array($scalarValue).
+			if err := dec.decode(map[string]interface{}{"0": v}, out); err != nil {
+				return err
+			}
 		}
 	case string:
 		switch out.Kind() {
@@ -354,6 +386,22 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			}
 			out.SetLen(1)
 			if err := dec.decode(v, out.Index(0)); err != nil {
+				return err
+			}
+		case reflect.Map:
+			// PHP flavered http://php.net/manual/en/language.types.array.php#language.types.array.casting
+			// For any of the types integer, float, string, boolean and resource,
+			// converting a value to an array results in an array with a single element with index zero and the value of the scalar which was converted.
+			// In other words, (array)$scalarValue is exactly the same as array($scalarValue).
+			if err := dec.decode(map[string]interface{}{"0": v}, out); err != nil {
+				return err
+			}
+		case reflect.Struct:
+			// PHP flavered http://php.net/manual/en/language.types.array.php#language.types.array.casting
+			// For any of the types integer, float, string, boolean and resource,
+			// converting a value to an array results in an array with a single element with index zero and the value of the scalar which was converted.
+			// In other words, (array)$scalarValue is exactly the same as array($scalarValue).
+			if err := dec.decode(map[string]interface{}{"0": v}, out); err != nil {
 				return err
 			}
 		}
@@ -418,24 +466,58 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			return dec.withErrorContext(&UnmarshalTypeError{Value: "object", Type: out.Type()})
 		case reflect.Map:
 			t := out.Type()
-			if t.Key().Kind() == reflect.String && t.Elem().Kind() == reflect.Interface {
+			kt := t.Key()
+			if kt.Kind() == reflect.String && t.Elem().Kind() == reflect.Interface {
 				out.Set(reflect.ValueOf(v))
 				break
 			}
 
 			// Map key must either have string kind, have an integer kind,
 			// or be an encoding.TextUnmarshaler.
-			switch t.Key().Kind() {
+			switch kt.Kind() {
 			case reflect.String,
 				reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 				reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 			default:
-				if !reflect.PtrTo(t.Key()).Implements(textUnmarshalerType) {
+				if !reflect.PtrTo(kt).Implements(textUnmarshalerType) {
 					return dec.withErrorContext(&UnmarshalTypeError{Value: "object", Type: out.Type()})
 				}
 			}
 			if out.IsNil() {
 				out.Set(reflect.MakeMap(t))
+			}
+			var mapElem reflect.Value
+			for key, vv := range v {
+				elemType := out.Type().Elem()
+				if !mapElem.IsValid() {
+					mapElem = reflect.New(elemType).Elem()
+				} else {
+					mapElem.Set(reflect.Zero(elemType))
+				}
+				subv := mapElem
+				if err := dec.decode(vv, subv); err != nil {
+					return err
+				}
+				var kv reflect.Value
+				switch kt.Kind() {
+				case reflect.String:
+					kv = reflect.ValueOf(key).Convert(kt)
+				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+					n, err := strconv.ParseInt(key, 10, 64)
+					if err != nil || reflect.Zero(kt).OverflowInt(n) {
+						return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + key, Type: kt})
+					}
+					kv = reflect.ValueOf(n).Convert(kt)
+				case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+					n, err := strconv.ParseUint(key, 10, 64)
+					if err != nil || reflect.Zero(kt).OverflowUint(n) {
+						return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + key, Type: kt})
+					}
+					kv = reflect.ValueOf(n).Convert(kt)
+				default:
+					panic("json: Unexpected key type") // should never occur
+				}
+				out.SetMapIndex(kv, subv)
 			}
 		case reflect.Struct:
 			for key, value := range v {
