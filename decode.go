@@ -179,6 +179,22 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			} else {
 				out.SetString("")
 			}
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			// PHP flavored http://php.net/manual/en/language.types.integer.php#language.types.integer.casting
+			// FALSE will yield 0 (zero), and TRUE will yield 1 (one).
+			if v {
+				out.SetInt(1)
+			} else {
+				out.SetInt(0)
+			}
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+			// PHP flavored http://php.net/manual/en/language.types.string.php#language.types.string.casting
+			// FALSE will yield 0 (zero), and TRUE will yield 1 (one).
+			if v {
+				out.SetUint(1)
+			} else {
+				out.SetUint(0)
+			}
 		}
 	case Number:
 		switch out.Kind() {
