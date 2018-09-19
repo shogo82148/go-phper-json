@@ -17,6 +17,10 @@ type Decoder struct {
 	dec                   *json.Decoder
 	disallowUnknownFields bool
 	useNumber             bool
+	errorContext          struct { // provides context for type errors
+		Struct string
+		Field  string
+	}
 }
 
 func NewDecoder(r io.Reader) *Decoder {
@@ -29,6 +33,18 @@ func NewDecoder(r io.Reader) *Decoder {
 
 func (dec *Decoder) Buffered() io.Reader {
 	return dec.dec.Buffered()
+}
+
+func (dec *Decoder) withErrorContext(err error) error {
+	if dec.errorContext.Struct != "" || dec.errorContext.Field != "" {
+		switch err := err.(type) {
+		case *UnmarshalTypeError:
+			err.Struct = dec.errorContext.Struct
+			err.Field = dec.errorContext.Field
+			return err
+		}
+	}
+	return err
 }
 
 // from the encoding/json package.
@@ -141,53 +157,53 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 	case bool:
 		switch out.Kind() {
 		default:
-			panic("TODO: handle UnmarshalTypeError")
+			return dec.withErrorContext(&UnmarshalTypeError{Value: "bool", Type: out.Type()})
 		case reflect.Bool:
 			out.SetBool(v)
 		case reflect.Interface:
 			if out.NumMethod() == 0 {
 			} else {
-				panic("TODO: handle UnmarshalTypeError")
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "bool", Type: out.Type()})
 			}
 		}
 	case Number:
 		switch out.Kind() {
 		default:
-			panic("TODO: handle UnmarshalTypeError")
+			return dec.withErrorContext(&UnmarshalTypeError{Value: "number", Type: out.Type()})
 		case reflect.String:
 			out.SetString(string(v))
 		case reflect.Interface:
 			n, err := dec.convertNumber(string(v))
 			if err != nil {
-				panic("TODO: handle UnmarshalTypeError")
+				return err
 			}
 			if out.NumMethod() != 0 {
-				panic("TODO: handle UnmarshalTypeError")
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "number", Type: out.Type()})
 			}
 			out.Set(reflect.ValueOf(n))
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			n, err := v.Int64()
 			if err != nil || out.OverflowInt(n) {
-				panic("TODO: handle UnmarshalTypeError")
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + string(v), Type: out.Type()})
 			}
 			out.SetInt(n)
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 			n, err := strconv.ParseUint(string(v), 10, 64)
 			if err != nil || out.OverflowUint(n) {
-				panic("TODO: handle UnmarshalTypeError")
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + string(v), Type: out.Type()})
 			}
 			out.SetUint(n)
 		case reflect.Float32, reflect.Float64:
 			n, err := strconv.ParseFloat(string(v), out.Type().Bits())
 			if err != nil || out.OverflowFloat(n) {
-				panic("TODO: handle UnmarshalTypeError")
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + string(v), Type: out.Type()})
 			}
 			out.SetFloat(n)
 		}
 	case string:
 		switch out.Kind() {
 		default:
-			panic("TODO: handle UnmarshalTypeError")
+			return dec.withErrorContext(&UnmarshalTypeError{Value: "string", Type: out.Type()})
 		case reflect.String:
 			out.SetString(v)
 		case reflect.Interface:
@@ -195,31 +211,31 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			n, err := strconv.ParseInt(string(v), 10, 64)
 			if err != nil || out.OverflowInt(n) {
-				panic("TODO: handle UnmarshalTypeError")
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + string(v), Type: out.Type()})
 			}
 			out.SetInt(n)
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 			n, err := strconv.ParseUint(string(v), 10, 64)
 			if err != nil || out.OverflowUint(n) {
-				panic("TODO: handle UnmarshalTypeError")
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + string(v), Type: out.Type()})
 			}
 			out.SetUint(n)
 		case reflect.Float32, reflect.Float64:
 			n, err := strconv.ParseFloat(string(v), out.Type().Bits())
 			if err != nil || out.OverflowFloat(n) {
-				panic("TODO: handle UnmarshalTypeError")
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + string(v), Type: out.Type()})
 			}
 			out.SetFloat(n)
 		}
 	case []interface{}:
 		switch out.Kind() {
 		default:
-			panic("TODO: handle UnmarshalTypeError")
+			return dec.withErrorContext(&UnmarshalTypeError{Value: "array", Type: out.Type()})
 		case reflect.Interface:
 			if out.NumMethod() == 0 {
 				out.Set(reflect.ValueOf(v))
 			} else {
-				panic("TODO: handle UnmarshalTypeError")
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "array", Type: out.Type()})
 			}
 		case reflect.Array:
 			l := len(v)
@@ -274,7 +290,7 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 			default:
 				if !reflect.PtrTo(t.Key()).Implements(textUnmarshalerType) {
-					panic("TODO: handle UnmarshalTypeError")
+					return dec.withErrorContext(&UnmarshalTypeError{Value: "object", Type: out.Type()})
 				}
 			}
 			if out.IsNil() {
@@ -310,10 +326,15 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 						}
 						subv = subv.Field(i)
 					}
+					dec.errorContext.Struct = out.Type().Name()
+					dec.errorContext.Field = f.name
 				} else if dec.disallowUnknownFields {
 					return fmt.Errorf("json: unknown field %q", key)
 				}
-				if err := dec.decode(value, subv); err != nil {
+				err := dec.decode(value, subv)
+				dec.errorContext.Struct = ""
+				dec.errorContext.Field = ""
+				if err != nil {
 					return err
 				}
 			}
