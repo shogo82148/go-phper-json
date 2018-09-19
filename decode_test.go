@@ -73,6 +73,23 @@ var unmarshalTests = []unmarshalTest{
 	{in: `{"T":null}`, ptr: new(map[string]interface{}), out: map[string]interface{}{"T": interface{}(nil)}},
 
 	// PHP flavored
+	// convert to boolean
+	{in: `false`, ptr: new(bool), out: false},
+	{in: `0`, ptr: new(bool), out: false},
+	{in: `1`, ptr: new(bool), out: true},
+	{in: `-2`, ptr: new(bool), out: true},
+	{in: `0.0`, ptr: new(bool), out: false},
+	{in: `2.3e5`, ptr: new(bool), out: true},
+	{in: `""`, ptr: new(bool), out: false},
+	{in: `"0"`, ptr: new(bool), out: false},
+	{in: `"foo"`, ptr: new(bool), out: true},
+	{in: `[]`, ptr: new(bool), out: false},
+	{in: `{}`, ptr: new(bool), out: false},
+	{in: `[12]`, ptr: new(bool), out: true},
+	{in: `{"foo":12}`, ptr: new(bool), out: true},
+	{in: `null`, ptr: new(bool), out: false},
+	{in: `"false"`, ptr: new(bool), out: true},
+
 	// convert to string
 	{in: `1`, ptr: new(string), out: "1"},
 	{in: `1.2`, ptr: new(string), out: "1.2"},

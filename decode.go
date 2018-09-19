@@ -157,6 +157,11 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			// PHP flavored http://php.net/manual/en/language.types.string.php#language.types.string.casting
 			// NULL is always converted to an empty string.
 			out.SetString("")
+		case reflect.Bool:
+			// PHP flavored http://php.net/manual/en/language.types.boolean.php#language.types.boolean.casting
+			// When converting to boolean, the following values are considered FALSE:
+			// the special type NULL (including unset variables)
+			out.SetBool(false)
 		}
 	case bool:
 		switch out.Kind() {
@@ -251,6 +256,16 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + string(v), Type: out.Type()})
 			}
 			out.SetFloat(n)
+		case reflect.Bool:
+			// PHP flavored http://php.net/manual/en/language.types.boolean.php#language.types.boolean.casting
+			// the integer 0 (zero)
+			// the float 0.0 (zero)
+			n, err := strconv.ParseFloat(string(v), 64)
+			if err == nil && n == 0 {
+				out.SetBool(false)
+			} else {
+				out.SetBool(true)
+			}
 		}
 	case string:
 		switch out.Kind() {
@@ -292,6 +307,15 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + string(v), Type: out.Type()})
 			}
 			out.SetFloat(n)
+		case reflect.Bool:
+			// PHP flavored http://php.net/manual/en/language.types.boolean.php#language.types.boolean.casting
+			// When converting to boolean, the following values are considered FALSE:
+			// the empty string, and the string "0"
+			if v == "" || v == "0" {
+				out.SetBool(false)
+			} else {
+				out.SetBool(true)
+			}
 		}
 	case []interface{}:
 		switch out.Kind() {
@@ -337,6 +361,15 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				if err := dec.decode(vv, out.Index(i)); err != nil {
 					return err
 				}
+			}
+		case reflect.Bool:
+			// PHP flavored http://php.net/manual/en/language.types.boolean.php#language.types.boolean.casting
+			// When converting to boolean, the following values are considered FALSE:
+			// an array with zero elements
+			if len(v) == 0 {
+				out.SetBool(false)
+			} else {
+				out.SetBool(true)
 			}
 		}
 	case map[string]interface{}:
@@ -403,6 +436,15 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				if err != nil {
 					return err
 				}
+			}
+		case reflect.Bool:
+			// PHP flavored http://php.net/manual/en/language.types.boolean.php#language.types.boolean.casting
+			// When converting to boolean, the following values are considered FALSE:
+			// an array with zero elements
+			if len(v) == 0 {
+				out.SetBool(false)
+			} else {
+				out.SetBool(true)
 			}
 		}
 	default:
