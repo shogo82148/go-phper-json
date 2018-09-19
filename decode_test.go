@@ -35,6 +35,25 @@ var unmarshalTests = []unmarshalTest{
 	{in: `"g-clef: \uD834\uDD1E"`, ptr: new(string), out: "g-clef: \U0001D11E"},
 	{in: `"invalid: \uD834x\uDD1E"`, ptr: new(string), out: "invalid: \uFFFDx\uFFFD"},
 	{in: "null", ptr: new(interface{}), out: nil},
+	// {in: `{"X": [1,2,3], "Y": 4}`, ptr: new(T), out: T{Y: 4}, err: &UnmarshalTypeError{"array", reflect.TypeOf(""), 7, "T", "X"}},
+	// {in: `{"x": 1}`, ptr: new(tx), out: tx{}},
+	// {in: `{"x": 1}`, ptr: new(tx), err: fmt.Errorf("json: unknown field \"x\""), disallowUnknownFields: true},
+	// {in: `{"F1":1,"F2":2,"F3":3}`, ptr: new(V), out: V{F1: float64(1), F2: int32(2), F3: Number("3")}},
+	// {in: `{"F1":1,"F2":2,"F3":3}`, ptr: new(V), out: V{F1: Number("1"), F2: int32(2), F3: Number("3")}, useNumber: true},
+	// {in: `{"k1":1,"k2":"s","k3":[1,2.0,3e-3],"k4":{"kk1":"s","kk2":2}}`, ptr: new(interface{}), out: ifaceNumAsFloat64},
+	// {in: `{"k1":1,"k2":"s","k3":[1,2.0,3e-3],"k4":{"kk1":"s","kk2":2}}`, ptr: new(interface{}), out: ifaceNumAsNumber, useNumber: true},
+
+	// raw values with whitespace
+	{in: "\n true ", ptr: new(bool), out: true},
+	{in: "\t 1 ", ptr: new(int), out: 1},
+	{in: "\r 1.2 ", ptr: new(float64), out: 1.2},
+	{in: "\t -5 \n", ptr: new(int16), out: int16(-5)},
+	{in: "\t \"a\\u1234\" \n", ptr: new(string), out: "a\u1234"},
+
+	// array tests
+	{in: `[1, 2, 3]`, ptr: new([3]int), out: [3]int{1, 2, 3}},
+	{in: `[1, 2, 3]`, ptr: new([1]int), out: [1]int{1}},
+	{in: `[1, 2, 3]`, ptr: new([5]int), out: [5]int{1, 2, 3, 0, 0}},
 
 	{in: `1`, ptr: new(string), out: "1"},
 }
