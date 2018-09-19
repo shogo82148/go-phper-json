@@ -80,6 +80,11 @@ var unmarshalTests = []unmarshalTest{
 	{in: `true`, ptr: new(string), out: "1"},
 	{in: `false`, ptr: new(string), out: ""},
 	{in: `null`, ptr: new(string), out: ""},
+
+	// convert to integer
+	{in: `"1"`, ptr: new(int), out: 1},
+	{in: `"1.1"`, ptr: new(int), out: 1},
+	{in: `1.1`, ptr: new(int), out: 1},
 }
 
 func TestUnmarshal(t *testing.T) {

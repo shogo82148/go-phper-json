@@ -197,12 +197,26 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			out.Set(reflect.ValueOf(n))
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			n, err := v.Int64()
+			if err != nil {
+				// PHP flavored http://php.net/manual/en/language.types.integer.php#language.types.integer.casting
+				// convert floating point numbers to integer
+				var f float64
+				f, err = v.Float64()
+				n = int64(f)
+			}
 			if err != nil || out.OverflowInt(n) {
 				return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + string(v), Type: out.Type()})
 			}
 			out.SetInt(n)
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 			n, err := strconv.ParseUint(string(v), 10, 64)
+			if err != nil {
+				// PHP flavored http://php.net/manual/en/language.types.integer.php#language.types.integer.casting
+				// convert floating point numbers to integer
+				var f float64
+				f, err = v.Float64()
+				n = uint64(f)
+			}
 			if err != nil || out.OverflowUint(n) {
 				return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + string(v), Type: out.Type()})
 			}
@@ -224,12 +238,26 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			out.Set(reflect.ValueOf(v))
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			n, err := strconv.ParseInt(string(v), 10, 64)
+			if err != nil {
+				// PHP flavored http://php.net/manual/en/language.types.integer.php#language.types.integer.casting
+				// convert floating point numbers to integer
+				var f float64
+				f, err = strconv.ParseFloat(v, 64)
+				n = int64(f)
+			}
 			if err != nil || out.OverflowInt(n) {
 				return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + string(v), Type: out.Type()})
 			}
 			out.SetInt(n)
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 			n, err := strconv.ParseUint(string(v), 10, 64)
+			if err != nil {
+				// PHP flavored http://php.net/manual/en/language.types.integer.php#language.types.integer.casting
+				// convert floating point numbers to integer
+				var f float64
+				f, err = strconv.ParseFloat(v, 64)
+				n = uint64(f)
+			}
 			if err != nil || out.OverflowUint(n) {
 				return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + string(v), Type: out.Type()})
 			}
