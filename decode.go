@@ -335,6 +335,10 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 		case reflect.Interface:
 			out.Set(reflect.ValueOf(v))
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			if v == "" {
+				out.SetInt(0)
+				break
+			}
 			n, err := strconv.ParseInt(string(v), 10, 64)
 			if err != nil {
 				// PHP flavored http://php.net/manual/en/language.types.integer.php#language.types.integer.casting
@@ -348,6 +352,10 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			}
 			out.SetInt(n)
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+			if v == "" {
+				out.SetUint(0)
+				break
+			}
 			n, err := strconv.ParseUint(string(v), 10, 64)
 			if err != nil {
 				// PHP flavored http://php.net/manual/en/language.types.integer.php#language.types.integer.casting
@@ -361,6 +369,10 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			}
 			out.SetUint(n)
 		case reflect.Float32, reflect.Float64:
+			if v == "" {
+				out.SetFloat(0)
+				break
+			}
 			n, err := strconv.ParseFloat(string(v), out.Type().Bits())
 			if err != nil || out.OverflowFloat(n) {
 				return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + string(v), Type: out.Type()})
