@@ -123,7 +123,11 @@ func (dec *Decoder) Decode(v interface{}) error {
 	if err := dec.dec.Decode(&iv); err != nil {
 		return err
 	}
-	return dec.decode(iv, reflect.ValueOf(v))
+	rv := reflect.ValueOf(v)
+	if rv.Kind() != reflect.Ptr || rv.IsNil() {
+		return &InvalidUnmarshalError{Type: reflect.TypeOf(v)}
+	}
+	return dec.decode(iv, rv)
 }
 
 func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
