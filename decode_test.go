@@ -271,6 +271,41 @@ var unmarshalTests = []unmarshalTest{
 		out: map[uintptr]bool{0: false, 10: true},
 	},
 
+	// Check that MarshalText and UnmarshalText take precedence
+	// over default integer handling in map keys.
+	{
+		in:  `{"u2":4}`,
+		ptr: new(map[u8marshal]int),
+		out: map[u8marshal]int{2: 4},
+	},
+	{
+		in:  `{"2":4}`,
+		ptr: new(map[u8marshal]int),
+		err: errMissingU8Prefix,
+	},
+
+	// integer-keyed map errors
+	{
+		in:  `{"abc":"abc"}`,
+		ptr: new(map[int]string),
+		err: &UnmarshalTypeError{Value: "number abc", Type: reflect.TypeOf(0)},
+	},
+	{
+		in:  `{"256":"abc"}`,
+		ptr: new(map[uint8]string),
+		err: &UnmarshalTypeError{Value: "number 256", Type: reflect.TypeOf(uint8(0))},
+	},
+	{
+		in:  `{"128":"abc"}`,
+		ptr: new(map[int8]string),
+		err: &UnmarshalTypeError{Value: "number 128", Type: reflect.TypeOf(int8(0))},
+	},
+	{
+		in:  `{"-1":"abc"}`,
+		ptr: new(map[uint8]string),
+		err: &UnmarshalTypeError{Value: "number -1", Type: reflect.TypeOf(uint8(0))},
+	},
+
 	// PHP flavored
 	// convert to boolean
 	{in: `false`, ptr: new(bool), out: false},
