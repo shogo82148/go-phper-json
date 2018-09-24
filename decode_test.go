@@ -5,11 +5,13 @@ import (
 	"encoding"
 	"errors"
 	"fmt"
+	"image"
 	"math"
 	"reflect"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 type T struct {
@@ -137,6 +139,232 @@ var (
 	ummapXY   = map[unmarshalerText]bool{unmarshalerText{"x", "y"}: true}
 )
 
+// Test data structures for anonymous fields.
+
+type Point struct {
+	Z int
+}
+
+type Top struct {
+	Level0 int
+	Embed0
+	*Embed0a
+	*Embed0b `json:"e,omitempty"` // treated as named
+	Embed0c  `json:"-"`           // ignored
+	Loop
+	Embed0p // has Point with X, Y, used
+	Embed0q // has Point with Z, used
+	embed   // contains exported field
+}
+
+type Embed0 struct {
+	Level1a int // overridden by Embed0a's Level1a with json tag
+	Level1b int // used because Embed0a's Level1b is renamed
+	Level1c int // used because Embed0a's Level1c is ignored
+	Level1d int // annihilated by Embed0a's Level1d
+	Level1e int `json:"x"` // annihilated by Embed0a.Level1e
+}
+
+type Embed0a struct {
+	Level1a int `json:"Level1a,omitempty"`
+	Level1b int `json:"LEVEL1B,omitempty"`
+	Level1c int `json:"-"`
+	Level1d int // annihilated by Embed0's Level1d
+	Level1f int `json:"x"` // annihilated by Embed0's Level1e
+}
+
+type Embed0b Embed0
+
+type Embed0c Embed0
+
+type Embed0p struct {
+	image.Point
+}
+
+type Embed0q struct {
+	Point
+}
+
+type embed struct {
+	Q int
+}
+
+type Loop struct {
+	Loop1 int `json:",omitempty"`
+	Loop2 int `json:",omitempty"`
+	*Loop
+}
+
+// From reflect test:
+// The X in S6 and S7 annihilate, but they also block the X in S8.S9.
+type S5 struct {
+	S6
+	S7
+	S8
+}
+
+type S6 struct {
+	X int
+}
+
+type S7 S6
+
+type S8 struct {
+	S9
+}
+
+type S9 struct {
+	X int
+	Y int
+}
+
+// From reflect test:
+// The X in S11.S6 and S12.S6 annihilate, but they also block the X in S13.S8.S9.
+type S10 struct {
+	S11
+	S12
+	S13
+}
+
+type S11 struct {
+	S6
+}
+
+type S12 struct {
+	S6
+}
+
+type S13 struct {
+	S8
+}
+
+type Ambig struct {
+	// Given "hello", the first match should win.
+	First  int `json:"HELLO"`
+	Second int `json:"Hello"`
+}
+
+type XYZ struct {
+	X interface{}
+	Y interface{}
+	Z interface{}
+}
+
+func sliceAddr(x []int) *[]int                 { return &x }
+func mapAddr(x map[string]int) *map[string]int { return &x }
+
+type byteWithMarshalJSON byte
+
+func (b byteWithMarshalJSON) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`"Z%.2x"`, byte(b))), nil
+}
+
+func (b *byteWithMarshalJSON) UnmarshalJSON(data []byte) error {
+	if len(data) != 5 || data[0] != '"' || data[1] != 'Z' || data[4] != '"' {
+		return fmt.Errorf("bad quoted string")
+	}
+	i, err := strconv.ParseInt(string(data[2:4]), 16, 8)
+	if err != nil {
+		return fmt.Errorf("bad hex")
+	}
+	*b = byteWithMarshalJSON(i)
+	return nil
+}
+
+type byteWithPtrMarshalJSON byte
+
+func (b *byteWithPtrMarshalJSON) MarshalJSON() ([]byte, error) {
+	return byteWithMarshalJSON(*b).MarshalJSON()
+}
+
+func (b *byteWithPtrMarshalJSON) UnmarshalJSON(data []byte) error {
+	return (*byteWithMarshalJSON)(b).UnmarshalJSON(data)
+}
+
+type byteWithMarshalText byte
+
+func (b byteWithMarshalText) MarshalText() ([]byte, error) {
+	return []byte(fmt.Sprintf(`Z%.2x`, byte(b))), nil
+}
+
+func (b *byteWithMarshalText) UnmarshalText(data []byte) error {
+	if len(data) != 3 || data[0] != 'Z' {
+		return fmt.Errorf("bad quoted string")
+	}
+	i, err := strconv.ParseInt(string(data[1:3]), 16, 8)
+	if err != nil {
+		return fmt.Errorf("bad hex")
+	}
+	*b = byteWithMarshalText(i)
+	return nil
+}
+
+type byteWithPtrMarshalText byte
+
+func (b *byteWithPtrMarshalText) MarshalText() ([]byte, error) {
+	return byteWithMarshalText(*b).MarshalText()
+}
+
+func (b *byteWithPtrMarshalText) UnmarshalText(data []byte) error {
+	return (*byteWithMarshalText)(b).UnmarshalText(data)
+}
+
+type intWithMarshalJSON int
+
+func (b intWithMarshalJSON) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`"Z%.2x"`, int(b))), nil
+}
+
+func (b *intWithMarshalJSON) UnmarshalJSON(data []byte) error {
+	if len(data) != 5 || data[0] != '"' || data[1] != 'Z' || data[4] != '"' {
+		return fmt.Errorf("bad quoted string")
+	}
+	i, err := strconv.ParseInt(string(data[2:4]), 16, 8)
+	if err != nil {
+		return fmt.Errorf("bad hex")
+	}
+	*b = intWithMarshalJSON(i)
+	return nil
+}
+
+type intWithPtrMarshalJSON int
+
+func (b *intWithPtrMarshalJSON) MarshalJSON() ([]byte, error) {
+	return intWithMarshalJSON(*b).MarshalJSON()
+}
+
+func (b *intWithPtrMarshalJSON) UnmarshalJSON(data []byte) error {
+	return (*intWithMarshalJSON)(b).UnmarshalJSON(data)
+}
+
+type intWithMarshalText int
+
+func (b intWithMarshalText) MarshalText() ([]byte, error) {
+	return []byte(fmt.Sprintf(`Z%.2x`, int(b))), nil
+}
+
+func (b *intWithMarshalText) UnmarshalText(data []byte) error {
+	if len(data) != 3 || data[0] != 'Z' {
+		return fmt.Errorf("bad quoted string")
+	}
+	i, err := strconv.ParseInt(string(data[1:3]), 16, 8)
+	if err != nil {
+		return fmt.Errorf("bad hex")
+	}
+	*b = intWithMarshalText(i)
+	return nil
+}
+
+type intWithPtrMarshalText int
+
+func (b *intWithPtrMarshalText) MarshalText() ([]byte, error) {
+	return intWithMarshalText(*b).MarshalText()
+}
+
+func (b *intWithPtrMarshalText) UnmarshalText(data []byte) error {
+	return (*intWithMarshalText)(b).UnmarshalText(data)
+}
+
 // A type for test php array.
 type phpArray struct {
 	First string `json:"0"`
@@ -149,6 +377,7 @@ type unmarshalTest struct {
 	err                   error
 	useNumber             bool
 	disallowUnknownFields bool
+	golden                bool
 }
 
 var unmarshalTests = []unmarshalTest{
@@ -306,6 +535,209 @@ var unmarshalTests = []unmarshalTest{
 		err: &UnmarshalTypeError{Value: "number -1", Type: reflect.TypeOf(uint8(0))},
 	},
 
+	// Map keys can be encoding.TextUnmarshalers.
+	{in: `{"x:y":true}`, ptr: &ummapType, out: ummapXY},
+	// If multiple values for the same key exists, only the most recent value is used.
+	{in: `{"x:y":false,"x:y":true}`, ptr: &ummapType, out: ummapXY},
+
+	// Overwriting of data.
+	// This is different from package xml, but it's what we've always done.
+	// Now documented and tested.
+	{in: `[2]`, ptr: sliceAddr([]int{1}), out: []int{2}},
+	{in: `{"key": 2}`, ptr: mapAddr(map[string]int{"old": 0, "key": 1}), out: map[string]int{"key": 2}},
+
+	{
+		in: `{
+			"Level0": 1,
+			"Level1b": 2,
+			"Level1c": 3,
+			"x": 4,
+			"Level1a": 5,
+			"LEVEL1B": 6,
+			"e": {
+				"Level1a": 8,
+				"Level1b": 9,
+				"Level1c": 10,
+				"Level1d": 11,
+				"x": 12
+			},
+			"Loop1": 13,
+			"Loop2": 14,
+			"X": 15,
+			"Y": 16,
+			"Z": 17,
+			"Q": 18
+		}`,
+		ptr: new(Top),
+		out: Top{
+			Level0: 1,
+			Embed0: Embed0{
+				Level1b: 2,
+				Level1c: 3,
+			},
+			Embed0a: &Embed0a{
+				Level1a: 5,
+				Level1b: 6,
+			},
+			Embed0b: &Embed0b{
+				Level1a: 8,
+				Level1b: 9,
+				Level1c: 10,
+				Level1d: 11,
+				Level1e: 12,
+			},
+			Loop: Loop{
+				Loop1: 13,
+				Loop2: 14,
+			},
+			Embed0p: Embed0p{
+				Point: image.Point{X: 15, Y: 16},
+			},
+			Embed0q: Embed0q{
+				Point: Point{Z: 17},
+			},
+			embed: embed{
+				Q: 18,
+			},
+		},
+	},
+	{
+		in:  `{"hello": 1}`,
+		ptr: new(Ambig),
+		out: Ambig{First: 1},
+	},
+
+	{
+		in:  `{"X": 1,"Y":2}`,
+		ptr: new(S5),
+		out: S5{S8: S8{S9: S9{Y: 2}}},
+	},
+	{
+		in:                    `{"X": 1,"Y":2}`,
+		ptr:                   new(S5),
+		err:                   fmt.Errorf("json: unknown field \"X\""),
+		disallowUnknownFields: true,
+	},
+	{
+		in:  `{"X": 1,"Y":2}`,
+		ptr: new(S10),
+		out: S10{S13: S13{S8: S8{S9: S9{Y: 2}}}},
+	},
+	{
+		in:                    `{"X": 1,"Y":2}`,
+		ptr:                   new(S10),
+		err:                   fmt.Errorf("json: unknown field \"X\""),
+		disallowUnknownFields: true,
+	},
+
+	// invalid UTF-8 is coerced to valid UTF-8.
+	{
+		in:  "\"hello\xffworld\"",
+		ptr: new(string),
+		out: "hello\ufffdworld",
+	},
+	{
+		in:  "\"hello\xc2\xc2world\"",
+		ptr: new(string),
+		out: "hello\ufffd\ufffdworld",
+	},
+	{
+		in:  "\"hello\xc2\xffworld\"",
+		ptr: new(string),
+		out: "hello\ufffd\ufffdworld",
+	},
+	{
+		in:  "\"hello\\ud800world\"",
+		ptr: new(string),
+		out: "hello\ufffdworld",
+	},
+	{
+		in:  "\"hello\\ud800\\ud800world\"",
+		ptr: new(string),
+		out: "hello\ufffd\ufffdworld",
+	},
+	{
+		in:  "\"hello\\ud800\\ud800world\"",
+		ptr: new(string),
+		out: "hello\ufffd\ufffdworld",
+	},
+	{
+		in:  "\"hello\xed\xa0\x80\xed\xb0\x80world\"",
+		ptr: new(string),
+		out: "hello\ufffd\ufffd\ufffd\ufffd\ufffd\ufffdworld",
+	},
+
+	// Used to be issue https://github.com/golang/go/issues/8305, but time.Time implements encoding.TextUnmarshaler so this works now.
+	{
+		in:  `{"2009-11-10T23:00:00Z": "hello world"}`,
+		ptr: &map[time.Time]string{},
+		out: map[time.Time]string{time.Date(2009, 11, 10, 23, 0, 0, 0, time.UTC): "hello world"},
+	},
+
+	// issue https://github.com/golang/go/issues/8305
+	{
+		in:  `{"2009-11-10T23:00:00Z": "hello world"}`,
+		ptr: &map[Point]string{},
+		err: &UnmarshalTypeError{Value: "object", Type: reflect.TypeOf(map[Point]string{})},
+	},
+	{
+		in:  `{"asdf": "hello world"}`,
+		ptr: &map[unmarshaler]string{},
+		err: &UnmarshalTypeError{Value: "object", Type: reflect.TypeOf(map[unmarshaler]string{})},
+	},
+
+	// related to issue https://github.com/golang/go/issues/13783.
+	// Go 1.7 changed marshaling a slice of typed byte to use the methods on the byte type,
+	// similar to marshaling a slice of typed int.
+	// These tests check that, assuming the byte type also has valid decoding methods,
+	// either the old base64 string encoding or the new per-element encoding can be
+	// successfully unmarshaled. The custom unmarshalers were accessible in earlier
+	// versions of Go, even though the custom marshaler was not.
+	{
+		in:  `"AQID"`,
+		ptr: new([]byteWithMarshalJSON),
+		out: []byteWithMarshalJSON{1, 2, 3},
+	},
+	{
+		in:     `["Z01","Z02","Z03"]`,
+		ptr:    new([]byteWithMarshalJSON),
+		out:    []byteWithMarshalJSON{1, 2, 3},
+		golden: true,
+	},
+	{
+		in:  `"AQID"`,
+		ptr: new([]byteWithMarshalText),
+		out: []byteWithMarshalText{1, 2, 3},
+	},
+	{
+		in:     `["Z01","Z02","Z03"]`,
+		ptr:    new([]byteWithMarshalText),
+		out:    []byteWithMarshalText{1, 2, 3},
+		golden: true,
+	},
+	{
+		in:  `"AQID"`,
+		ptr: new([]byteWithPtrMarshalJSON),
+		out: []byteWithPtrMarshalJSON{1, 2, 3},
+	},
+	{
+		in:     `["Z01","Z02","Z03"]`,
+		ptr:    new([]byteWithPtrMarshalJSON),
+		out:    []byteWithPtrMarshalJSON{1, 2, 3},
+		golden: true,
+	},
+	{
+		in:  `"AQID"`,
+		ptr: new([]byteWithPtrMarshalText),
+		out: []byteWithPtrMarshalText{1, 2, 3},
+	},
+	{
+		in:     `["Z01","Z02","Z03"]`,
+		ptr:    new([]byteWithPtrMarshalText),
+		out:    []byteWithPtrMarshalText{1, 2, 3},
+		golden: true,
+	},
+
 	// PHP flavored
 	// convert to boolean
 	{in: `false`, ptr: new(bool), out: false},
@@ -377,7 +809,8 @@ var unmarshalTests = []unmarshalTest{
 
 func TestUnmarshal(t *testing.T) {
 	for i, tt := range unmarshalTests {
-		dec := NewDecoder(strings.NewReader(tt.in))
+		in := []byte(tt.in)
+		dec := NewDecoder(bytes.NewReader(in))
 		if tt.useNumber {
 			dec.UseNumber()
 		}
@@ -393,6 +826,37 @@ func TestUnmarshal(t *testing.T) {
 		}
 		if !reflect.DeepEqual(v.Elem().Interface(), tt.out) {
 			t.Errorf("#%d: have %#+v, want %#+v", i, v.Elem().Interface(), tt.out)
+			data, _ := Marshal(v.Elem().Interface())
+			fmt.Println(string(data))
+			data, _ = Marshal(tt.out)
+			fmt.Println(string(data))
+			continue
+		}
+
+		// Check round trip also decodes correctly.
+		if tt.err == nil {
+			enc, err := Marshal(v.Interface())
+			if err != nil {
+				t.Errorf("#%d: errir re-marshaling: %v", i, err)
+			}
+			if tt.golden && !bytes.Equal(enc, in) {
+				t.Errorf("#%d: remarshal mismatch:\nhave: %s\nwant: %s", i, enc, in)
+			}
+			vv := reflect.New(reflect.TypeOf(tt.ptr).Elem())
+			dec = NewDecoder(bytes.NewReader(enc))
+			if tt.useNumber {
+				dec.UseNumber()
+			}
+			if err := dec.Decode(vv.Interface()); err != nil {
+				t.Errorf("#%d: error re-unmarshaling %#q: %v", i, enc, err)
+				continue
+			}
+			if !reflect.DeepEqual(v.Elem().Interface(), vv.Elem().Interface()) {
+				t.Errorf("#%d: mismatch\nhave: %#+v\nwant: %#+v", i, v.Elem().Interface(), vv.Elem().Interface())
+				t.Errorf("     In: %q", strings.Map(noSpace, string(in)))
+				t.Errorf("Marshal: %q", strings.Map(noSpace, string(enc)))
+				continue
+			}
 		}
 	}
 }
