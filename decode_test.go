@@ -8,6 +8,7 @@ import (
 	"image"
 	"math"
 	"math/big"
+	"net"
 	"reflect"
 	"strconv"
 	"strings"
@@ -1624,4 +1625,42 @@ func TestInvalidUnmarshal(t *testing.T) {
 			t.Errorf("Unmarshal = %q; want %q", got, tt.want)
 		}
 	}
+}
+
+var invalidUnmarshalTextTests = []struct {
+	v    interface{}
+	want string
+}{
+	{nil, "json: Unmarshal(nil)"},
+	{struct{}{}, "json: Unmarshal(non-pointer struct {})"},
+	{(*int)(nil), "json: Unmarshal(nil *int)"},
+	{new(net.IP), "json: cannot unmarshal number into Go value of type *net.IP"},
+}
+
+func TestInvalidUnmarshalText(t *testing.T) {
+	buf := []byte(`123`)
+	for _, tt := range invalidUnmarshalTextTests {
+		err := Unmarshal(buf, tt.v)
+		if err == nil {
+			t.Errorf("Unmarshal expecting error, got nil")
+			continue
+		}
+		if got := err.Error(); got != tt.want {
+			t.Errorf("Unmarshal = %q; want %q", got, tt.want)
+		}
+	}
+}
+
+type unmarshalPanic struct{}
+
+func (unmarshalPanic) UnmarshalJSON([]byte) error { panic(0xdead) }
+
+func TestUnmarshalPanic(t *testing.T) {
+	defer func() {
+		if got := recover(); !reflect.DeepEqual(got, 0xdead) {
+			t.Errorf("panic() = (%T)(%v), want 0xdead", got, got)
+		}
+	}()
+	Unmarshal([]byte("{}"), &unmarshalPanic{})
+	t.Fatalf("Unmarshal should have panicked")
 }
