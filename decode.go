@@ -602,7 +602,7 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 		case reflect.Map:
 			t := out.Type()
 			kt := t.Key()
-			if kt.Kind() == reflect.String && t.Elem().Kind() == reflect.Interface {
+			if kt.Kind() == reflect.String && t.Elem().Kind() == reflect.Interface && out.Len() == 0 {
 				out.Set(reflect.ValueOf(v))
 				break
 			}
