@@ -546,12 +546,70 @@ var unmarshalTests = []unmarshalTest{
 	{in: `[2]`, ptr: sliceAddr([]int{1}), out: []int{2}},
 	{in: `{"key": 2}`, ptr: mapAddr(map[string]int{"old": 0, "key": 1}), out: map[string]int{"key": 2}},
 
+	// XXX: impompatible behavior
+	// the order of object keys are ignored, so the behavior of following test is non-deterministic.
+	// {
+	// 	in: `{
+	// 		"Level0": 1,
+	// 		"Level1b": 2,
+	// 		"Level1c": 3,
+	// 		"x": 4,
+	// 		"Level1a": 5,
+	// 		"LEVEL1B": 6,
+	// 		"e": {
+	// 			"Level1a": 8,
+	// 			"Level1b": 9,
+	// 			"Level1c": 10,
+	// 			"Level1d": 11,
+	// 			"x": 12
+	// 		},
+	// 		"Loop1": 13,
+	// 		"Loop2": 14,
+	// 		"X": 15,
+	// 		"Y": 16,
+	// 		"Z": 17,
+	// 		"Q": 18
+	// 	}`,
+	// 	ptr: new(Top),
+	// 	out: Top{
+	// 		Level0: 1,
+	// 		Embed0: Embed0{
+	// 			Level1b: 2,
+	// 			Level1c: 3,
+	// 		},
+	// 		Embed0a: &Embed0a{
+	// 			Level1a: 5,
+	// 			Level1b: 6,
+	// 		},
+	// 		Embed0b: &Embed0b{
+	// 			Level1a: 8,
+	// 			Level1b: 9,
+	// 			Level1c: 10,
+	// 			Level1d: 11,
+	// 			Level1e: 12,
+	// 		},
+	// 		Loop: Loop{
+	// 			Loop1: 13,
+	// 			Loop2: 14,
+	// 		},
+	// 		Embed0p: Embed0p{
+	// 			Point: image.Point{X: 15, Y: 16},
+	// 		},
+	// 		Embed0q: Embed0q{
+	// 			Point: Point{Z: 17},
+	// 		},
+	// 		embed: embed{
+	// 			Q: 18,
+	// 		},
+	// 	},
+	// },
+
+	// rewrite to be deterministic behavior.
 	{
 		in: `{
 			"Level0": 1,
-			"Level1b": 2,
+			"Level1b": 6,
 			"Level1c": 3,
-			"x": 4,
 			"Level1a": 5,
 			"LEVEL1B": 6,
 			"e": {
@@ -572,7 +630,7 @@ var unmarshalTests = []unmarshalTest{
 		out: Top{
 			Level0: 1,
 			Embed0: Embed0{
-				Level1b: 2,
+				Level1b: 6,
 				Level1c: 3,
 			},
 			Embed0a: &Embed0a{
