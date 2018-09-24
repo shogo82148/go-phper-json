@@ -1,17 +1,39 @@
-# go-phper-json
-PHP flavored encoding/json package
+// Copyright 2011 The Go Authors. All rights reserved.
+// Copyright 2018 Shogo Ichinose. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
 
-[![GoDoc](https://godoc.org/github.com/shogo82148/go-phper-json?status.svg)](https://godoc.org/github.com/shogo82148/go-phper-json)
+package phperjson_test
 
-phperjson package works in the same way as the encoding/json package,
-but it is useful for dealing with PHP-encoded JSON.
-http://php.net/manual/en/function.json-encode.php
+import (
+	"fmt"
+	"os"
+	"reflect"
 
-Unlike `json.Unmarshal`, `phperjson.Unmarshal` can unmashal a JSON object into a slice.
-The key of the object is interpreted as an index of the slice.
-It is use for decoding PHP-encoded JSON with JSON_FORCE_OBJECT option.
+	phperjson "github.com/shogo82148/go-phper-json"
+)
 
-```go
+func ExampleMarshal() {
+	type ColorGroup struct {
+		ID     int
+		Name   string
+		Colors []string
+	}
+	group := ColorGroup{
+		ID:     1,
+		Name:   "Reds",
+		Colors: []string{"Crimson", "Red", "Ruby", "Maroon"},
+	}
+	// phperjson.Marshal is compatible with json.Marshal.
+	b, err := phperjson.Marshal(group)
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	os.Stdout.Write(b)
+	// Output:
+	// {"ID":1,"Name":"Reds","Colors":["Crimson","Red","Ruby","Maroon"]}
+}
+
 func ExampleUnmarshal() {
 	var jsonBlob = []byte(`[
 	{"Name": "Platypus", "Order": "Monotremata"},
@@ -48,14 +70,7 @@ func ExampleUnmarshal() {
 	// [{Name:Platypus Order:Monotremata} {Name:Quoll Order:Dasyuromorphia}]
 	// true
 }
-```
 
-And more, you can use ``Type Juggling'' of PHP.
-For example, phperjson.Unmarshal can unmashal a JSON string into int,
-if the string can be parsed as number.
-See http://php.net/manual/en/language.types.type-juggling.php for more detail.
-
-```go
 func ExampleUnmarshal_typeJaggling() {
 	var jsonBlob = []byte(`{
 	"R": 98,
@@ -77,4 +92,3 @@ func ExampleUnmarshal_typeJaggling() {
 	// Output:
 	// {R:98 G:218 B:255}
 }
-```
