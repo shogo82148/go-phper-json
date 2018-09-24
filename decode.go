@@ -3,6 +3,7 @@ package phperjson
 import (
 	"bytes"
 	"encoding"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -388,6 +389,14 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				out.SetBool(true)
 			}
 		case reflect.Slice:
+			if out.Type().Elem().Kind() == reflect.Uint8 {
+				b, err := base64.StdEncoding.DecodeString(v)
+				if err != nil {
+					return err
+				}
+				out.SetBytes(b)
+				break
+			}
 			// PHP flavered http://php.net/manual/en/language.types.array.php#language.types.array.casting
 			// For any of the types integer, float, string, boolean and resource,
 			// converting a value to an array results in an array with a single element with index zero and the value of the scalar which was converted.

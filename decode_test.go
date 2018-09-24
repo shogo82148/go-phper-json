@@ -79,6 +79,16 @@ var unmarshalTests = []unmarshalTest{
 	{in: `{"T":[]}`, ptr: new(map[string]interface{}), out: map[string]interface{}{"T": []interface{}{}}},
 	{in: `{"T":null}`, ptr: new(map[string]interface{}), out: map[string]interface{}{"T": interface{}(nil)}},
 
+	// composite tests
+	{in: allValueIndent, ptr: new(All), out: allValue},
+	{in: allValueCompact, ptr: new(All), out: allValue},
+	{in: allValueIndent, ptr: new(*All), out: &allValue},
+	{in: allValueCompact, ptr: new(*All), out: &allValue},
+	{in: pallValueIndent, ptr: new(All), out: pallValue},
+	{in: pallValueCompact, ptr: new(All), out: pallValue},
+	{in: pallValueIndent, ptr: new(*All), out: &pallValue},
+	{in: pallValueCompact, ptr: new(*All), out: &pallValue},
+
 	// integer-keyed map test
 	{
 		in:  `{"-1":"a","0":"b","1":"c"}`,
@@ -196,3 +206,332 @@ func TestUnmarshal(t *testing.T) {
 		}
 	}
 }
+
+func isSpace(c byte) bool {
+	return c == ' ' || c == '\t' || c == '\r' || c == '\n'
+}
+
+func noSpace(c rune) rune {
+	if isSpace(byte(c)) { //only used for ascii
+		return -1
+	}
+	return c
+}
+
+type All struct {
+	Bool    bool
+	Int     int
+	Int8    int8
+	Int16   int16
+	Int32   int32
+	Int64   int64
+	Uint    uint
+	Uint8   uint8
+	Uint16  uint16
+	Uint32  uint32
+	Uint64  uint64
+	Uintptr uintptr
+	Float32 float32
+	Float64 float64
+
+	Foo  string `json:"bar"`
+	Foo2 string `json:"bar2,dummyopt"`
+
+	IntStr     int64   `json:",string"`
+	UintptrStr uintptr `json:",string"`
+
+	PBool    *bool
+	PInt     *int
+	PInt8    *int8
+	PInt16   *int16
+	PInt32   *int32
+	PInt64   *int64
+	PUint    *uint
+	PUint8   *uint8
+	PUint16  *uint16
+	PUint32  *uint32
+	PUint64  *uint64
+	PUintptr *uintptr
+	PFloat32 *float32
+	PFloat64 *float64
+
+	String  string
+	PString *string
+
+	Map   map[string]Small
+	MapP  map[string]*Small
+	PMap  *map[string]Small
+	PMapP *map[string]*Small
+
+	EmptyMap map[string]Small
+	NilMap   map[string]Small
+
+	Slice   []Small
+	SliceP  []*Small
+	PSlice  *[]Small
+	PSliceP *[]*Small
+
+	EmptySlice []Small
+	NilSlice   []Small
+
+	StringSlice []string
+	ByteSlice   []byte
+
+	Small   Small
+	PSmall  *Small
+	PPSmall **Small
+
+	Interface  interface{}
+	PInterface *interface{}
+
+	unexported int
+}
+
+type Small struct {
+	Tag string
+}
+
+var allValue = All{
+	Bool:       true,
+	Int:        2,
+	Int8:       3,
+	Int16:      4,
+	Int32:      5,
+	Int64:      6,
+	Uint:       7,
+	Uint8:      8,
+	Uint16:     9,
+	Uint32:     10,
+	Uint64:     11,
+	Uintptr:    12,
+	Float32:    14.1,
+	Float64:    15.1,
+	Foo:        "foo",
+	Foo2:       "foo2",
+	IntStr:     42,
+	UintptrStr: 44,
+	String:     "16",
+	Map: map[string]Small{
+		"17": {Tag: "tag17"},
+		"18": {Tag: "tag18"},
+	},
+	MapP: map[string]*Small{
+		"19": {Tag: "tag19"},
+		"20": nil,
+	},
+	EmptyMap:    map[string]Small{},
+	Slice:       []Small{{Tag: "tag20"}, {Tag: "tag21"}},
+	SliceP:      []*Small{{Tag: "tag22"}, nil, {Tag: "tag23"}},
+	EmptySlice:  []Small{},
+	StringSlice: []string{"str24", "str25", "str26"},
+	ByteSlice:   []byte{27, 28, 29},
+	Small:       Small{Tag: "tag30"},
+	PSmall:      &Small{Tag: "tag31"},
+	Interface:   5.2,
+}
+
+var pallValue = All{
+	PBool:      &allValue.Bool,
+	PInt:       &allValue.Int,
+	PInt8:      &allValue.Int8,
+	PInt16:     &allValue.Int16,
+	PInt32:     &allValue.Int32,
+	PInt64:     &allValue.Int64,
+	PUint:      &allValue.Uint,
+	PUint8:     &allValue.Uint8,
+	PUint16:    &allValue.Uint16,
+	PUint32:    &allValue.Uint32,
+	PUint64:    &allValue.Uint64,
+	PUintptr:   &allValue.Uintptr,
+	PFloat32:   &allValue.Float32,
+	PFloat64:   &allValue.Float64,
+	PString:    &allValue.String,
+	PMap:       &allValue.Map,
+	PMapP:      &allValue.MapP,
+	PSlice:     &allValue.Slice,
+	PSliceP:    &allValue.SliceP,
+	PPSmall:    &allValue.PSmall,
+	PInterface: &allValue.Interface,
+}
+
+var allValueIndent = `{
+	"Bool": true,
+	"Int": 2,
+	"Int8": 3,
+	"Int16": 4,
+	"Int32": 5,
+	"Int64": 6,
+	"Uint": 7,
+	"Uint8": 8,
+	"Uint16": 9,
+	"Uint32": 10,
+	"Uint64": 11,
+	"Uintptr": 12,
+	"Float32": 14.1,
+	"Float64": 15.1,
+	"bar": "foo",
+	"bar2": "foo2",
+	"IntStr": "42",
+	"UintptrStr": "44",
+	"PBool": null,
+	"PInt": null,
+	"PInt8": null,
+	"PInt16": null,
+	"PInt32": null,
+	"PInt64": null,
+	"PUint": null,
+	"PUint8": null,
+	"PUint16": null,
+	"PUint32": null,
+	"PUint64": null,
+	"PUintptr": null,
+	"PFloat32": null,
+	"PFloat64": null,
+	"String": "16",
+	"PString": null,
+	"Map": {
+		"17": {
+			"Tag": "tag17"
+		},
+		"18": {
+			"Tag": "tag18"
+		}
+	},
+	"MapP": {
+		"19": {
+			"Tag": "tag19"
+		},
+		"20": null
+	},
+	"PMap": null,
+	"PMapP": null,
+	"EmptyMap": {},
+	"NilMap": null,
+	"Slice": [
+		{
+			"Tag": "tag20"
+		},
+		{
+			"Tag": "tag21"
+		}
+	],
+	"SliceP": [
+		{
+			"Tag": "tag22"
+		},
+		null,
+		{
+			"Tag": "tag23"
+		}
+	],
+	"PSlice": null,
+	"PSliceP": null,
+	"EmptySlice": [],
+	"NilSlice": null,
+	"StringSlice": [
+		"str24",
+		"str25",
+		"str26"
+	],
+	"ByteSlice": "Gxwd",
+	"Small": {
+		"Tag": "tag30"
+	},
+	"PSmall": {
+		"Tag": "tag31"
+	},
+	"PPSmall": null,
+	"Interface": 5.2,
+	"PInterface": null
+}`
+
+var allValueCompact = strings.Map(noSpace, allValueIndent)
+
+var pallValueIndent = `{
+	"Bool": false,
+	"Int": 0,
+	"Int8": 0,
+	"Int16": 0,
+	"Int32": 0,
+	"Int64": 0,
+	"Uint": 0,
+	"Uint8": 0,
+	"Uint16": 0,
+	"Uint32": 0,
+	"Uint64": 0,
+	"Uintptr": 0,
+	"Float32": 0,
+	"Float64": 0,
+	"bar": "",
+	"bar2": "",
+        "IntStr": "0",
+	"UintptrStr": "0",
+	"PBool": true,
+	"PInt": 2,
+	"PInt8": 3,
+	"PInt16": 4,
+	"PInt32": 5,
+	"PInt64": 6,
+	"PUint": 7,
+	"PUint8": 8,
+	"PUint16": 9,
+	"PUint32": 10,
+	"PUint64": 11,
+	"PUintptr": 12,
+	"PFloat32": 14.1,
+	"PFloat64": 15.1,
+	"String": "",
+	"PString": "16",
+	"Map": null,
+	"MapP": null,
+	"PMap": {
+		"17": {
+			"Tag": "tag17"
+		},
+		"18": {
+			"Tag": "tag18"
+		}
+	},
+	"PMapP": {
+		"19": {
+			"Tag": "tag19"
+		},
+		"20": null
+	},
+	"EmptyMap": null,
+	"NilMap": null,
+	"Slice": null,
+	"SliceP": null,
+	"PSlice": [
+		{
+			"Tag": "tag20"
+		},
+		{
+			"Tag": "tag21"
+		}
+	],
+	"PSliceP": [
+		{
+			"Tag": "tag22"
+		},
+		null,
+		{
+			"Tag": "tag23"
+		}
+	],
+	"EmptySlice": null,
+	"NilSlice": null,
+	"StringSlice": null,
+	"ByteSlice": null,
+	"Small": {
+		"Tag": ""
+	},
+	"PSmall": null,
+	"PPSmall": {
+		"Tag": "tag31"
+	},
+	"Interface": null,
+	"PInterface": 5.2
+}`
+
+var pallValueCompact = strings.Map(noSpace, pallValueIndent)
