@@ -161,15 +161,6 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 		case reflect.Interface, reflect.Ptr, reflect.Map, reflect.Slice:
 			out.Set(reflect.Zero(out.Type()))
 			// otherwise, ignore null for primitives
-		case reflect.String:
-			// PHP flavored http://php.net/manual/en/language.types.string.php#language.types.string.casting
-			// NULL is always converted to an empty string.
-			out.SetString("")
-		case reflect.Bool:
-			// PHP flavored http://php.net/manual/en/language.types.boolean.php#language.types.boolean.casting
-			// When converting to boolean, the following values are considered FALSE:
-			// the special type NULL (including unset variables)
-			out.SetBool(false)
 		}
 	case bool:
 		switch out.Kind() {
