@@ -70,7 +70,7 @@ type Number = json.Number
 // RawMessage is an alias for json.RawMessage.
 type RawMessage = json.RawMessage
 
-// SyntaxError = json.SyntaxError.
+// SyntaxError is an alias for json.SyntaxError.
 type SyntaxError = json.SyntaxError
 
 // Token is an alias for json.Token.

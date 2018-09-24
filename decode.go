@@ -18,7 +18,7 @@ import (
 
 var textUnmarshalerType = reflect.TypeOf(new(encoding.TextUnmarshaler)).Elem()
 
-// Decoder is a wrapper of json.Decoder.
+// A Decoder reads and decodes JSON values from an input stream.
 type Decoder struct {
 	dec                   *json.Decoder
 	disallowUnknownFields bool
@@ -29,6 +29,7 @@ type Decoder struct {
 	}
 }
 
+// NewDecoder returns a new decoder that reads from r.
 func NewDecoder(r io.Reader) *Decoder {
 	dec := json.NewDecoder(r)
 	dec.UseNumber()
@@ -37,6 +38,8 @@ func NewDecoder(r io.Reader) *Decoder {
 	}
 }
 
+// Buffered returns a reader of the data remaining in the Decoder's buffer.
+// The reader is valid until the next call to Decode.
 func (dec *Decoder) Buffered() io.Reader {
 	return dec.dec.Buffered()
 }
@@ -123,6 +126,7 @@ func indirect(v reflect.Value, decodingNull bool) (Unmarshaler, encoding.TextUnm
 	return nil, nil, v
 }
 
+// Decode reads the next JSON-encoded value from its input and stores it in the value pointed to by v.
 func (dec *Decoder) Decode(v interface{}) error {
 	var iv interface{}
 	if err := dec.dec.Decode(&iv); err != nil {
@@ -820,22 +824,45 @@ func (dec *Decoder) convertNumber2Float64(v interface{}) (interface{}, error) {
 	return v, nil
 }
 
+// DisallowUnknownFields causes the Decoder to return an error
+// when the destination is a struct and the input contains object keys
+// which do not match any non-ignored, exported fields in the destination.
 func (dec *Decoder) DisallowUnknownFields() {
 	dec.disallowUnknownFields = true
 }
 
+// More reports whether there is another element in the current array or object being parsed.
 func (dec *Decoder) More() bool {
 	return dec.dec.More()
 }
 
+// Token returns the next JSON token in the input stream.
+// At the end of the input stream, Token returns nil, io.EOF.
 func (dec *Decoder) Token() (json.Token, error) {
 	return dec.dec.Token()
 }
 
+// UseNumber causes the Decoder to unmarshal a number into an interface{} as a Number instead of as a float64.
 func (dec *Decoder) UseNumber() {
 	dec.useNumber = true
 }
 
+// Unmarshal parses the JSON-encoded data and stores the result
+// in the value pointed to by v. If v is nil or not a pointer,
+// Unmarshal returns an InvalidUnmarshalError.
+//
+// phperjson.Unmashal works in the same way as json.Unmashal,
+// but it is useful for dealing with PHP-encoded JSON.
+// http://php.net/manual/en/function.json-encode.php
+//
+// Unlike json.Unmarshal, phperjson.Unmarshal can unmashal a JSON object into a slice.
+// The key of the object is interpreted as an index of the slice.
+// It is use for decoding PHP-encoded JSON with JSON_FORCE_OBJECT option.
+//
+// And more, you can use ``Type Juggling'' of PHP.
+// For example, phperjson.Unmarshal can unmashal a JSON string into int,
+// if the string can be parsed as number.
+// See http://php.net/manual/en/language.types.type-juggling.php for more detail.
 func Unmarshal(data []byte, v interface{}) error {
 	// Check for well-formedness.
 	// Avoids filling out half a data structure
