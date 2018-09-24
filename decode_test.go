@@ -1532,3 +1532,25 @@ func TestSliceOfCustomByte(t *testing.T) {
 		t.Fatalf("expected %v == %v", a, b)
 	}
 }
+
+// Test handling of unexported fields that should be ignored.
+// Issue https://github.com/golang/go/issues/4660
+type unexportedFields struct {
+	Name string
+	m    map[string]interface{} `json:"-"`
+	m2   map[string]interface{} `json:"abcd"`
+}
+
+func TestUnmarshalUnexported(t *testing.T) {
+	input := `{"Name": "Bob", "m": {"x": 123}, "m2": {"y": 456}, "abcd": {"z": 789}}`
+	want := &unexportedFields{Name: "Bob"}
+
+	out := &unexportedFields{}
+	err := Unmarshal([]byte(input), out)
+	if err != nil {
+		t.Errorf("got error %v, expected nil", err)
+	}
+	if !reflect.DeepEqual(out, want) {
+		t.Errorf("got %q, want %q", out, want)
+	}
+}
