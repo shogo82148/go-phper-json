@@ -70,3 +70,25 @@ func ExampleUnmarshal() {
 	// [{Name:Platypus Order:Monotremata} {Name:Quoll Order:Dasyuromorphia}]
 	// true
 }
+
+func ExampleUnmarshal_typeJaggling() {
+	var jsonBlob = []byte(`{
+	"R": 98,
+	"G": "218",
+	"B": 255.0
+}`)
+	type RGB struct {
+		R uint8
+		G uint8
+		B uint8
+	}
+	// phperjson.Unmarshal is compatible with json.Unmarshal.
+	var color RGB
+	if err := phperjson.Unmarshal(jsonBlob, &color); err != nil {
+		fmt.Println("error:", err)
+	}
+	fmt.Printf("%+v\n", color)
+
+	// Output:
+	// {R:98 G:218 B:255}
+}
