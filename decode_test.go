@@ -14,6 +14,33 @@ type T struct {
 	Z int `json:"-"`
 }
 
+type V struct {
+	F1 interface{}
+	F2 int32
+	F3 Number
+	F4 *VOuter
+}
+
+type VOuter struct {
+	V V
+}
+
+// ifaceNumAsFloat64/ifaceNumAsNumber are used to test unmarshaling with and
+// without UseNumber
+var ifaceNumAsFloat64 = map[string]interface{}{
+	"k1": float64(1),
+	"k2": "s",
+	"k3": []interface{}{float64(1), float64(2.0), float64(3e-3)},
+	"k4": map[string]interface{}{"kk1": "s", "kk2": float64(2)},
+}
+
+var ifaceNumAsNumber = map[string]interface{}{
+	"k1": Number("1"),
+	"k2": "s",
+	"k3": []interface{}{Number("1"), Number("2.0"), Number("3e-3")},
+	"k4": map[string]interface{}{"kk1": "s", "kk2": Number("2")},
+}
+
 type tx struct {
 	x int
 }
@@ -52,10 +79,10 @@ var unmarshalTests = []unmarshalTest{
 	{in: `{"X": [1,2,3], "Y": 4}`, ptr: new(T), out: T{Y: 4}, err: &UnmarshalTypeError{Value: "array", Type: reflect.TypeOf(""), Struct: "T", Field: "X"}},
 	{in: `{"x": 1}`, ptr: new(tx), out: tx{}},
 	{in: `{"x": 1}`, ptr: new(tx), err: fmt.Errorf("json: unknown field \"x\""), disallowUnknownFields: true},
-	// {in: `{"F1":1,"F2":2,"F3":3}`, ptr: new(V), out: V{F1: float64(1), F2: int32(2), F3: Number("3")}},
-	// {in: `{"F1":1,"F2":2,"F3":3}`, ptr: new(V), out: V{F1: Number("1"), F2: int32(2), F3: Number("3")}, useNumber: true},
-	// {in: `{"k1":1,"k2":"s","k3":[1,2.0,3e-3],"k4":{"kk1":"s","kk2":2}}`, ptr: new(interface{}), out: ifaceNumAsFloat64},
-	// {in: `{"k1":1,"k2":"s","k3":[1,2.0,3e-3],"k4":{"kk1":"s","kk2":2}}`, ptr: new(interface{}), out: ifaceNumAsNumber, useNumber: true},
+	{in: `{"F1":1,"F2":2,"F3":3}`, ptr: new(V), out: V{F1: float64(1), F2: int32(2), F3: Number("3")}},
+	{in: `{"F1":1,"F2":2,"F3":3}`, ptr: new(V), out: V{F1: Number("1"), F2: int32(2), F3: Number("3")}, useNumber: true},
+	{in: `{"k1":1,"k2":"s","k3":[1,2.0,3e-3],"k4":{"kk1":"s","kk2":2}}`, ptr: new(interface{}), out: ifaceNumAsFloat64},
+	{in: `{"k1":1,"k2":"s","k3":[1,2.0,3e-3],"k4":{"kk1":"s","kk2":2}}`, ptr: new(interface{}), out: ifaceNumAsNumber, useNumber: true},
 
 	// raw values with whitespace
 	{in: "\n true ", ptr: new(bool), out: true},

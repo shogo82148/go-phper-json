@@ -589,6 +589,18 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 		switch out.Kind() {
 		default:
 			return dec.withErrorContext(&UnmarshalTypeError{Value: "object", Type: out.Type()})
+		case reflect.Interface:
+			if out.NumMethod() == 0 {
+				if dec.useNumber {
+					out.Set(reflect.ValueOf(v))
+				} else if conveted, err := dec.convertNumber2Float64(v); err == nil {
+					out.Set(reflect.ValueOf(conveted))
+				} else {
+					return err
+				}
+			} else {
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "object", Type: out.Type()})
+			}
 		case reflect.Map:
 			t := out.Type()
 			kt := t.Key()
@@ -771,6 +783,34 @@ func (dec *Decoder) convertNumber(s string) (interface{}, error) {
 		return nil, &UnmarshalTypeError{Value: "number " + s, Type: reflect.TypeOf(0.0)}
 	}
 	return f, nil
+}
+
+func (dec *Decoder) convertNumber2Float64(v interface{}) (interface{}, error) {
+	switch v := v.(type) {
+	case Number:
+		f, err := strconv.ParseFloat(string(v), 64)
+		if err != nil {
+			return nil, &UnmarshalTypeError{Value: "number " + string(v), Type: reflect.TypeOf(0.0)}
+		}
+		return f, nil
+	case []interface{}:
+		for i, vv := range v {
+			var err error
+			v[i], err = dec.convertNumber2Float64(vv)
+			if err != nil {
+				return nil, err
+			}
+		}
+	case map[string]interface{}:
+		for key, vv := range v {
+			var err error
+			v[key], err = dec.convertNumber2Float64(vv)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return v, nil
 }
 
 func (dec *Decoder) DisallowUnknownFields() {
