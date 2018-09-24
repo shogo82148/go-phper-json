@@ -738,6 +738,39 @@ var unmarshalTests = []unmarshalTest{
 		golden: true,
 	},
 
+	{in: `0.000001`, ptr: new(float64), out: 0.000001, golden: true},
+	{in: `1e-7`, ptr: new(float64), out: 1e-7, golden: true},
+	{in: `100000000000000000000`, ptr: new(float64), out: 100000000000000000000.0, golden: true},
+	{in: `1e+21`, ptr: new(float64), out: 1e21, golden: true},
+	{in: `-0.000001`, ptr: new(float64), out: -0.000001, golden: true},
+	{in: `-1e-7`, ptr: new(float64), out: -1e-7, golden: true},
+	{in: `-100000000000000000000`, ptr: new(float64), out: -100000000000000000000.0, golden: true},
+	{in: `-1e+21`, ptr: new(float64), out: -1e21, golden: true},
+	{in: `999999999999999900000`, ptr: new(float64), out: 999999999999999900000.0, golden: true},
+	{in: `9007199254740992`, ptr: new(float64), out: 9007199254740992.0, golden: true},
+	{in: `9007199254740993`, ptr: new(float64), out: 9007199254740992.0, golden: false},
+
+	{
+		in:  `{"V": {"F2": "hello"}}`,
+		ptr: new(VOuter),
+		err: &UnmarshalTypeError{
+			Value:  "string",
+			Struct: "V",
+			Field:  "F2",
+			Type:   reflect.TypeOf(int32(0)),
+		},
+	},
+	{
+		in:  `{"V": {"F4": {}, "F2": "hello"}}`,
+		ptr: new(VOuter),
+		err: &UnmarshalTypeError{
+			Value:  "string",
+			Struct: "V",
+			Field:  "F2",
+			Type:   reflect.TypeOf(int32(0)),
+		},
+	},
+
 	// PHP flavored
 	// convert to boolean
 	{in: `false`, ptr: new(bool), out: false},

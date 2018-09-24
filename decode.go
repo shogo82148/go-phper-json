@@ -356,7 +356,7 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				n = int64(f)
 			}
 			if err != nil || out.OverflowInt(n) {
-				return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + string(v), Type: out.Type()})
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "string", Type: out.Type()})
 			}
 			out.SetInt(n)
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
@@ -373,7 +373,7 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				n = uint64(f)
 			}
 			if err != nil || out.OverflowUint(n) {
-				return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + string(v), Type: out.Type()})
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "string", Type: out.Type()})
 			}
 			out.SetUint(n)
 		case reflect.Float32, reflect.Float64:
@@ -383,7 +383,7 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			}
 			n, err := strconv.ParseFloat(string(v), out.Type().Bits())
 			if err != nil || out.OverflowFloat(n) {
-				return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + string(v), Type: out.Type()})
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "string", Type: out.Type()})
 			}
 			out.SetFloat(n)
 		case reflect.Bool:
