@@ -2,6 +2,7 @@
 PHP flavored encoding/json package
 
 [![GoDoc](https://godoc.org/github.com/shogo82148/go-phper-json?status.svg)](https://godoc.org/github.com/shogo82148/go-phper-json)
+[![Build Status](https://travis-ci.com/shogo82148/go-phper-json.svg?branch=master)](https://travis-ci.com/shogo82148/go-phper-json)
 
 phperjson package works in the same way as the encoding/json package,
 but it is useful for dealing with PHP-encoded JSON.
