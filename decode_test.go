@@ -1,9 +1,13 @@
 package phperjson
 
 import (
+	"bytes"
+	"encoding"
+	"errors"
 	"fmt"
 	"math"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -51,6 +55,89 @@ type tx struct {
 
 type u8 uint8
 
+// A type that can unmarshal itself.
+
+type unmarshaler struct {
+	T bool
+}
+
+func (u *unmarshaler) UnmarshalJSON(b []byte) error {
+	*u = unmarshaler{true} // All we need to see that UnmarshalJSON is called.
+	return nil
+}
+
+type ustruct struct {
+	M unmarshaler
+}
+
+type unmarshalerText struct {
+	A, B string
+}
+
+// needed for re-marshaling tests
+func (u unmarshalerText) MarshalText() ([]byte, error) {
+	return []byte(u.A + ":" + u.B), nil
+}
+
+func (u *unmarshalerText) UnmarshalText(b []byte) error {
+	pos := bytes.IndexByte(b, ':')
+	if pos == -1 {
+		return errors.New("missing separator")
+	}
+	u.A, u.B = string(b[:pos]), string(b[pos+1:])
+	return nil
+}
+
+var _ encoding.TextUnmarshaler = (*unmarshalerText)(nil)
+
+type ustructText struct {
+	M unmarshalerText
+}
+
+// u8marshal is an integer type that can marshal/unmarshal itself.
+type u8marshal uint8
+
+func (u8 u8marshal) MarshalText() ([]byte, error) {
+	return []byte(fmt.Sprintf("u%d", u8)), nil
+}
+
+var errMissingU8Prefix = errors.New("missing 'u' prefix")
+
+func (u8 *u8marshal) UnmarshalText(b []byte) error {
+	if !bytes.HasPrefix(b, []byte{'u'}) {
+		return errMissingU8Prefix
+	}
+	n, err := strconv.Atoi(string(b[1:]))
+	if err != nil {
+		return err
+	}
+	*u8 = u8marshal(n)
+	return nil
+}
+
+var _ encoding.TextUnmarshaler = (*u8marshal)(nil)
+
+var (
+	um0, um1 unmarshaler // target2 of unmarshaling
+	ump      = &um1
+	umtrue   = unmarshaler{true}
+	umslice  = []unmarshaler{{true}}
+	umslicep = new([]unmarshaler)
+	umstruct = ustruct{unmarshaler{true}}
+
+	um0T, um1T   unmarshalerText // target2 of unmarshaling
+	umpType      = &um1T
+	umtrueXY     = unmarshalerText{"x", "y"}
+	umsliceXY    = []unmarshalerText{{"x", "y"}}
+	umslicepType = new([]unmarshalerText)
+	umstructType = new(ustructText)
+	umstructXY   = ustructText{unmarshalerText{"x", "y"}}
+
+	ummapType = map[unmarshalerText]bool{}
+	ummapXY   = map[unmarshalerText]bool{unmarshalerText{"x", "y"}: true}
+)
+
+// A type for test php array.
 type phpArray struct {
 	First string `json:"0"`
 }
@@ -105,6 +192,23 @@ var unmarshalTests = []unmarshalTest{
 	{in: `{"alphabet": "xyz"}`, ptr: new(U), out: U{}},
 	{in: `{"alphabet": "xyz"}`, ptr: new(U), err: fmt.Errorf("json: unknown field \"alphabet\""), disallowUnknownFields: true},
 
+	// syntax errors
+	// SyntaxError.msg is private field, so I can't test it.
+	// {in: `{"X": "foo", "Y"}`, err: &SyntaxError{"invalid character '}' after object key", 17}},
+	// {in: `[1, 2, 3+]`, err: &SyntaxError{"invalid character '+' after array element", 9}},
+	// {in: `{"X":12x}`, err: &SyntaxError{"invalid character 'x' after object key:value pair", 8}, useNumber: true},
+
+	// raw value errors
+	// SyntaxError.msg is private field, so I can't test it.
+	// {in: "\x01 42", err: &SyntaxError{"invalid character '\\x01' looking for beginning of value", 1}},
+	// {in: " 42 \x01", err: &SyntaxError{"invalid character '\\x01' after top-level value", 5}},
+	// {in: "\x01 true", err: &SyntaxError{"invalid character '\\x01' looking for beginning of value", 1}},
+	// {in: " false \x01", err: &SyntaxError{"invalid character '\\x01' after top-level value", 8}},
+	// {in: "\x01 1.2", err: &SyntaxError{"invalid character '\\x01' looking for beginning of value", 1}},
+	// {in: " 3.4 \x01", err: &SyntaxError{"invalid character '\\x01' after top-level value", 6}},
+	// {in: "\x01 \"string\"", err: &SyntaxError{"invalid character '\\x01' looking for beginning of value", 1}},
+	// {in: " \"string\" \x01", err: &SyntaxError{"invalid character '\\x01' after top-level value", 11}},
+
 	// array tests
 	{in: `[1, 2, 3]`, ptr: new([3]int), out: [3]int{1, 2, 3}},
 	{in: `[1, 2, 3]`, ptr: new([1]int), out: [1]int{1}},
@@ -125,6 +229,20 @@ var unmarshalTests = []unmarshalTest{
 	{in: pallValueCompact, ptr: new(All), out: pallValue},
 	{in: pallValueIndent, ptr: new(*All), out: &pallValue},
 	{in: pallValueCompact, ptr: new(*All), out: &pallValue},
+
+	// unmarshal interface test
+	{in: `{"T":false}`, ptr: &um0, out: umtrue}, // use "false" so test will fail if custom unmarshaler is not called
+	{in: `{"T":false}`, ptr: &ump, out: &umtrue},
+	{in: `[{"T":false}]`, ptr: &umslice, out: umslice},
+	{in: `[{"T":false}]`, ptr: &umslicep, out: &umslice},
+	{in: `{"M":{"T":"x:y"}}`, ptr: &umstruct, out: umstruct},
+
+	// UnmarshalText interface test
+	{in: `"x:y"`, ptr: &um0T, out: umtrueXY},
+	{in: `"x:y"`, ptr: &umpType, out: &umtrueXY},
+	{in: `["x:y"]`, ptr: &umsliceXY, out: umsliceXY},
+	{in: `["x:y"]`, ptr: &umslicepType, out: &umsliceXY},
+	{in: `{"M":"x:y"}`, ptr: umstructType, out: umstructXY},
 
 	// integer-keyed map test
 	{

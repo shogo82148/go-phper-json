@@ -140,11 +140,18 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 		return u.UnmarshalJSON(data)
 	}
 	if ut != nil {
-		data, err := json.Marshal(in)
-		if err != nil {
-			return err
+		switch v := in.(type) {
+		default:
+			return dec.withErrorContext(&UnmarshalTypeError{Type: out.Type()})
+		case nil:
+			return dec.withErrorContext(&UnmarshalTypeError{Value: "null", Type: out.Type()})
+		case bool:
+			return dec.withErrorContext(&UnmarshalTypeError{Value: "bool", Type: out.Type()})
+		case Number:
+			return dec.withErrorContext(&UnmarshalTypeError{Value: "number", Type: out.Type()})
+		case string:
+			return ut.UnmarshalText([]byte(v))
 		}
-		return ut.UnmarshalText(data)
 	}
 
 	out = pv
