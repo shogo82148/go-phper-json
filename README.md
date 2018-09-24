@@ -78,3 +78,26 @@ func ExampleUnmarshal_typeJaggling() {
 	// {R:98 G:218 B:255}
 }
 ```
+
+## Benchmark
+
+```
+$ go test -bench . -benchmem
+goos: darwin
+goarch: amd64
+pkg: github.com/shogo82148/go-phper-json
+BenchmarkUnicodeDecoder/json-4           5000000               274 ns/op          51.04 MB/s          36 B/op          2 allocs/op
+BenchmarkUnicodeDecoder/phper-json-4     3000000               432 ns/op          32.36 MB/s          68 B/op          4 allocs/op
+BenchmarkCodeUnmarshal/json-4                100          20498031 ns/op          94.67 MB/s     3274027 B/op      92663 allocs/op
+BenchmarkCodeUnmarshal/phper-json-4           30          38771577 ns/op          50.05 MB/s    16434644 B/op     566562 allocs/op
+BenchmarkUnmarshalString/json-4         10000000               181 ns/op             176 B/op          2 allocs/op
+BenchmarkUnmarshalString/phper-json-4    2000000              1034 ns/op            2672 B/op          9 allocs/op
+BenchmarkUnmarshalFloat64/json-4        10000000               163 ns/op             164 B/op          2 allocs/op
+BenchmarkUnmarshalFloat64/phper-json-4   1000000              1120 ns/op            2660 B/op          9 allocs/op
+BenchmarkUnmarshalInt64/json-4          10000000               124 ns/op             160 B/op          1 allocs/op
+BenchmarkUnmarshalInt64/phper-json-4     2000000               983 ns/op            2656 B/op          8 allocs/op
+BenchmarkUnmapped/json-4                 2000000               617 ns/op             216 B/op          4 allocs/op
+BenchmarkUnmapped/phper-json-4            500000              2321 ns/op            2528 B/op         33 allocs/op
+PASS
+ok      github.com/shogo82148/go-phper-json     23.683s
+```
