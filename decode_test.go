@@ -1511,3 +1511,24 @@ func TestStringKind(t *testing.T) {
 		t.Error("Items should be equal after encoding and then decoding")
 	}
 }
+
+// The fix for issue https://github.com/golang/go/issues/8962 introduced a regression.
+// Issue https://github.com/golang/go/issues/12921.
+func TestSliceOfCustomByte(t *testing.T) {
+	type Uint8 uint8
+
+	a := []Uint8("hello")
+
+	data, err := Marshal(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var b []Uint8
+	err = Unmarshal(data, &b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(a, b) {
+		t.Fatalf("expected %v == %v", a, b)
+	}
+}
