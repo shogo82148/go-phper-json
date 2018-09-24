@@ -3,6 +3,7 @@ package phperjson
 import (
 	"bytes"
 	"encoding"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -122,7 +123,11 @@ func (dec *Decoder) Decode(v interface{}) error {
 	if err := dec.dec.Decode(&iv); err != nil {
 		return err
 	}
-	return dec.decode(iv, reflect.ValueOf(v))
+	rv := reflect.ValueOf(v)
+	if rv.Kind() != reflect.Ptr || rv.IsNil() {
+		return &InvalidUnmarshalError{Type: reflect.TypeOf(v)}
+	}
+	return dec.decode(iv, rv)
 }
 
 func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
@@ -139,11 +144,18 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 		return u.UnmarshalJSON(data)
 	}
 	if ut != nil {
-		data, err := json.Marshal(in)
-		if err != nil {
-			return err
+		switch v := in.(type) {
+		default:
+			return dec.withErrorContext(&UnmarshalTypeError{Type: out.Type()})
+		case nil:
+			return dec.withErrorContext(&UnmarshalTypeError{Value: "null", Type: out.Type()})
+		case bool:
+			return dec.withErrorContext(&UnmarshalTypeError{Value: "bool", Type: out.Type()})
+		case Number:
+			return dec.withErrorContext(&UnmarshalTypeError{Value: "number", Type: out.Type()})
+		case string:
+			return ut.UnmarshalText([]byte(v))
 		}
-		return ut.UnmarshalText(data)
 	}
 
 	out = pv
@@ -153,15 +165,6 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 		case reflect.Interface, reflect.Ptr, reflect.Map, reflect.Slice:
 			out.Set(reflect.Zero(out.Type()))
 			// otherwise, ignore null for primitives
-		case reflect.String:
-			// PHP flavored http://php.net/manual/en/language.types.string.php#language.types.string.casting
-			// NULL is always converted to an empty string.
-			out.SetString("")
-		case reflect.Bool:
-			// PHP flavored http://php.net/manual/en/language.types.boolean.php#language.types.boolean.casting
-			// When converting to boolean, the following values are considered FALSE:
-			// the special type NULL (including unset variables)
-			out.SetBool(false)
 		}
 	case bool:
 		switch out.Kind() {
@@ -348,7 +351,7 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				n = int64(f)
 			}
 			if err != nil || out.OverflowInt(n) {
-				return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + string(v), Type: out.Type()})
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "string", Type: out.Type()})
 			}
 			out.SetInt(n)
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
@@ -365,7 +368,7 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				n = uint64(f)
 			}
 			if err != nil || out.OverflowUint(n) {
-				return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + string(v), Type: out.Type()})
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "string", Type: out.Type()})
 			}
 			out.SetUint(n)
 		case reflect.Float32, reflect.Float64:
@@ -375,7 +378,7 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			}
 			n, err := strconv.ParseFloat(string(v), out.Type().Bits())
 			if err != nil || out.OverflowFloat(n) {
-				return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + string(v), Type: out.Type()})
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "string", Type: out.Type()})
 			}
 			out.SetFloat(n)
 		case reflect.Bool:
@@ -388,6 +391,14 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				out.SetBool(true)
 			}
 		case reflect.Slice:
+			if out.Type().Elem().Kind() == reflect.Uint8 {
+				b, err := base64.StdEncoding.DecodeString(v)
+				if err != nil {
+					return err
+				}
+				out.SetBytes(b)
+				break
+			}
 			// PHP flavered http://php.net/manual/en/language.types.array.php#language.types.array.casting
 			// For any of the types integer, float, string, boolean and resource,
 			// converting a value to an array results in an array with a single element with index zero and the value of the scalar which was converted.
@@ -580,10 +591,22 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 		switch out.Kind() {
 		default:
 			return dec.withErrorContext(&UnmarshalTypeError{Value: "object", Type: out.Type()})
+		case reflect.Interface:
+			if out.NumMethod() == 0 {
+				if dec.useNumber {
+					out.Set(reflect.ValueOf(v))
+				} else if conveted, err := dec.convertNumber2Float64(v); err == nil {
+					out.Set(reflect.ValueOf(conveted))
+				} else {
+					return err
+				}
+			} else {
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "object", Type: out.Type()})
+			}
 		case reflect.Map:
 			t := out.Type()
 			kt := t.Key()
-			if kt.Kind() == reflect.String && t.Elem().Kind() == reflect.Interface {
+			if kt.Kind() == reflect.String && t.Elem().Kind() == reflect.Interface && out.Len() == 0 {
 				out.Set(reflect.ValueOf(v))
 				break
 			}
@@ -762,6 +785,34 @@ func (dec *Decoder) convertNumber(s string) (interface{}, error) {
 		return nil, &UnmarshalTypeError{Value: "number " + s, Type: reflect.TypeOf(0.0)}
 	}
 	return f, nil
+}
+
+func (dec *Decoder) convertNumber2Float64(v interface{}) (interface{}, error) {
+	switch v := v.(type) {
+	case Number:
+		f, err := strconv.ParseFloat(string(v), 64)
+		if err != nil {
+			return nil, &UnmarshalTypeError{Value: "number " + string(v), Type: reflect.TypeOf(0.0)}
+		}
+		return f, nil
+	case []interface{}:
+		for i, vv := range v {
+			var err error
+			v[i], err = dec.convertNumber2Float64(vv)
+			if err != nil {
+				return nil, err
+			}
+		}
+	case map[string]interface{}:
+		for key, vv := range v {
+			var err error
+			v[key], err = dec.convertNumber2Float64(vv)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return v, nil
 }
 
 func (dec *Decoder) DisallowUnknownFields() {
