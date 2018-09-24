@@ -1488,3 +1488,26 @@ type MustNotUnmarshalText struct{}
 func (x MustNotUnmarshalText) UnmarshalText(text []byte) error {
 	return errors.New("MustNotUnmarshalText was used")
 }
+
+func TestStringKind(t *testing.T) {
+	type stringKind string
+
+	var m1, m2 map[stringKind]int
+	m1 = map[stringKind]int{
+		"foo": 42,
+	}
+
+	data, err := Marshal(m1)
+	if err != nil {
+		t.Errorf("Unexpected error marshaling: %v", err)
+	}
+
+	err = Unmarshal(data, &m2)
+	if err != nil {
+		t.Errorf("Unexpected error unmarshaling: %v", err)
+	}
+
+	if !reflect.DeepEqual(m1, m2) {
+		t.Error("Items should be equal after encoding and then decoding")
+	}
+}
