@@ -1,7 +1,8 @@
 # go-phper-json
+
 PHP flavored encoding/json package
 
-[![GoDoc](https://godoc.org/github.com/shogo82148/go-phper-json?status.svg)](https://godoc.org/github.com/shogo82148/go-phper-json)
+[![Go Reference](https://pkg.go.dev/badge/github.com/shogo82148/go-phper-json.svg)](https://pkg.go.dev/github.com/shogo82148/go-phper-json)
 [![Build Status](https://github.com/shogo82148/go-phper-json/workflows/Go/badge.svg)](https://github.com/shogo82148/go-phper-json/actions)
 
 phperjson package works in the same way as the encoding/json package,
