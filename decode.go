@@ -864,14 +864,6 @@ func (dec *Decoder) UseNumber() {
 // if the string can be parsed as number.
 // See http://php.net/manual/en/language.types.type-juggling.php for more detail.
 func Unmarshal(data []byte, v interface{}) error {
-	// Check for well-formedness.
-	// Avoids filling out half a data structure
-	// before discovering a JSON syntax error.
-	err := json.Unmarshal(data, nil)
-	if _, ok := err.(*InvalidUnmarshalError); !ok {
-		return err
-	}
-
 	d := NewDecoder(bytes.NewReader(data))
 	return d.Decode(v)
 }
