@@ -388,7 +388,7 @@ type unmarshalTest struct {
 }
 
 var unmarshalTests = []unmarshalTest{
-	// test compatiblity with encoding/json
+	// test compatibility with encoding/json
 	// basic types
 	{in: `true`, ptr: new(bool), out: true},
 	{in: `1`, ptr: new(int), out: 1},
@@ -553,7 +553,7 @@ var unmarshalTests = []unmarshalTest{
 	{in: `[2]`, ptr: sliceAddr([]int{1}), out: []int{2}},
 	{in: `{"key": 2}`, ptr: mapAddr(map[string]int{"old": 0, "key": 1}), out: map[string]int{"key": 2}},
 
-	// XXX: impompatible behavior
+	// XXX: incompatible behavior
 	// the order of object keys are ignored, so the behavior of following test is non-deterministic.
 	// {
 	// 	in: `{
@@ -935,7 +935,7 @@ func TestUnmarshal(t *testing.T) {
 		if tt.err == nil {
 			enc, err := Marshal(v.Interface())
 			if err != nil {
-				t.Errorf("#%d: errir re-marshaling: %v", i, err)
+				t.Errorf("#%d: error re-marshaling: %v", i, err)
 			}
 			if tt.golden && !bytes.Equal(enc, in) {
 				t.Errorf("#%d: remarshal mismatch:\nhave: %s\nwant: %s", i, enc, in)
