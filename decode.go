@@ -604,8 +604,8 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			if out.NumMethod() == 0 {
 				if dec.useNumber {
 					out.Set(reflect.ValueOf(v))
-				} else if conveted, err := dec.convertNumber2Float64(v); err == nil {
-					out.Set(reflect.ValueOf(conveted))
+				} else if converted, err := dec.convertNumber2Float64(v); err == nil {
+					out.Set(reflect.ValueOf(converted))
 				} else {
 					return err
 				}
