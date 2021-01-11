@@ -780,7 +780,7 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			}
 		}
 	default:
-		panic(fmt.Sprintf("unkown type: %v", reflect.TypeOf(v)))
+		panic(fmt.Sprintf("unknown type: %v", reflect.TypeOf(v)))
 	}
 	return nil
 }
