@@ -222,7 +222,7 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				out.SetFloat(0)
 			}
 		case reflect.Slice:
-			// PHP flavered http://php.net/manual/en/language.types.array.php#language.types.array.casting
+			// PHP flavored http://php.net/manual/en/language.types.array.php#language.types.array.casting
 			// For any of the types integer, float, string, boolean and resource,
 			// converting a value to an array results in an array with a single element with index zero and the value of the scalar which was converted.
 			// In other words, (array)$scalarValue is exactly the same as array($scalarValue).
@@ -235,7 +235,7 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				return err
 			}
 		case reflect.Map:
-			// PHP flavered http://php.net/manual/en/language.types.array.php#language.types.array.casting
+			// PHP flavored http://php.net/manual/en/language.types.array.php#language.types.array.casting
 			// For any of the types integer, float, string, boolean and resource,
 			// converting a value to an array results in an array with a single element with index zero and the value of the scalar which was converted.
 			// In other words, (array)$scalarValue is exactly the same as array($scalarValue).
@@ -243,7 +243,7 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				return err
 			}
 		case reflect.Struct:
-			// PHP flavered http://php.net/manual/en/language.types.array.php#language.types.array.casting
+			// PHP flavored http://php.net/manual/en/language.types.array.php#language.types.array.casting
 			// For any of the types integer, float, string, boolean and resource,
 			// converting a value to an array results in an array with a single element with index zero and the value of the scalar which was converted.
 			// In other words, (array)$scalarValue is exactly the same as array($scalarValue).
@@ -309,7 +309,7 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				out.SetBool(true)
 			}
 		case reflect.Slice:
-			// PHP flavered http://php.net/manual/en/language.types.array.php#language.types.array.casting
+			// PHP flavored http://php.net/manual/en/language.types.array.php#language.types.array.casting
 			// For any of the types integer, float, string, boolean and resource,
 			// converting a value to an array results in an array with a single element with index zero and the value of the scalar which was converted.
 			// In other words, (array)$scalarValue is exactly the same as array($scalarValue).
@@ -322,7 +322,7 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				return err
 			}
 		case reflect.Map:
-			// PHP flavered http://php.net/manual/en/language.types.array.php#language.types.array.casting
+			// PHP flavored http://php.net/manual/en/language.types.array.php#language.types.array.casting
 			// For any of the types integer, float, string, boolean and resource,
 			// converting a value to an array results in an array with a single element with index zero and the value of the scalar which was converted.
 			// In other words, (array)$scalarValue is exactly the same as array($scalarValue).
@@ -330,7 +330,7 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				return err
 			}
 		case reflect.Struct:
-			// PHP flavered http://php.net/manual/en/language.types.array.php#language.types.array.casting
+			// PHP flavored http://php.net/manual/en/language.types.array.php#language.types.array.casting
 			// For any of the types integer, float, string, boolean and resource,
 			// converting a value to an array results in an array with a single element with index zero and the value of the scalar which was converted.
 			// In other words, (array)$scalarValue is exactly the same as array($scalarValue).
@@ -408,7 +408,7 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				out.SetBytes(b)
 				break
 			}
-			// PHP flavered http://php.net/manual/en/language.types.array.php#language.types.array.casting
+			// PHP flavored http://php.net/manual/en/language.types.array.php#language.types.array.casting
 			// For any of the types integer, float, string, boolean and resource,
 			// converting a value to an array results in an array with a single element with index zero and the value of the scalar which was converted.
 			// In other words, (array)$scalarValue is exactly the same as array($scalarValue).
@@ -421,7 +421,7 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				return err
 			}
 		case reflect.Map:
-			// PHP flavered http://php.net/manual/en/language.types.array.php#language.types.array.casting
+			// PHP flavored http://php.net/manual/en/language.types.array.php#language.types.array.casting
 			// For any of the types integer, float, string, boolean and resource,
 			// converting a value to an array results in an array with a single element with index zero and the value of the scalar which was converted.
 			// In other words, (array)$scalarValue is exactly the same as array($scalarValue).
@@ -429,7 +429,7 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				return err
 			}
 		case reflect.Struct:
-			// PHP flavered http://php.net/manual/en/language.types.array.php#language.types.array.casting
+			// PHP flavored http://php.net/manual/en/language.types.array.php#language.types.array.casting
 			// For any of the types integer, float, string, boolean and resource,
 			// converting a value to an array results in an array with a single element with index zero and the value of the scalar which was converted.
 			// In other words, (array)$scalarValue is exactly the same as array($scalarValue).
