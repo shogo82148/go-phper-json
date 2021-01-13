@@ -10,8 +10,11 @@ import (
 	"encoding"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"math"
+	"math/big"
 	"reflect"
 	"strconv"
 )
@@ -267,28 +270,14 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			}
 			out.Set(reflect.ValueOf(n))
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			n, err := v.Int64()
+			n, err := parseInt(string(v), out.Type())
 			if err != nil {
-				// PHP flavored http://php.net/manual/en/language.types.integer.php#language.types.integer.casting
-				// convert floating point numbers to integer
-				var f float64
-				f, err = v.Float64()
-				n = int64(f)
-			}
-			if err != nil || out.OverflowInt(n) {
 				return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + string(v), Type: out.Type()})
 			}
 			out.SetInt(n)
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-			n, err := strconv.ParseUint(string(v), 10, 64)
+			n, err := parseUint(string(v), out.Type())
 			if err != nil {
-				// PHP flavored http://php.net/manual/en/language.types.integer.php#language.types.integer.casting
-				// convert floating point numbers to integer
-				var f float64
-				f, err = v.Float64()
-				n = uint64(f)
-			}
-			if err != nil || out.OverflowUint(n) {
 				return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + string(v), Type: out.Type()})
 			}
 			out.SetUint(n)
@@ -351,15 +340,8 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				out.SetInt(0)
 				break
 			}
-			n, err := strconv.ParseInt(string(v), 10, 64)
+			n, err := parseInt(v, out.Type())
 			if err != nil {
-				// PHP flavored http://php.net/manual/en/language.types.integer.php#language.types.integer.casting
-				// convert floating point numbers to integer
-				var f float64
-				f, err = strconv.ParseFloat(v, 64)
-				n = int64(f)
-			}
-			if err != nil || out.OverflowInt(n) {
 				return dec.withErrorContext(&UnmarshalTypeError{Value: "string", Type: out.Type()})
 			}
 			out.SetInt(n)
@@ -368,15 +350,8 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				out.SetUint(0)
 				break
 			}
-			n, err := strconv.ParseUint(string(v), 10, 64)
+			n, err := parseUint(v, out.Type())
 			if err != nil {
-				// PHP flavored http://php.net/manual/en/language.types.integer.php#language.types.integer.casting
-				// convert floating point numbers to integer
-				var f float64
-				f, err = strconv.ParseFloat(v, 64)
-				n = uint64(f)
-			}
-			if err != nil || out.OverflowUint(n) {
 				return dec.withErrorContext(&UnmarshalTypeError{Value: "string", Type: out.Type()})
 			}
 			out.SetUint(n)
@@ -785,6 +760,8 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 	return nil
 }
 
+// convertNumber converts the number literal s to a float64 or a Number
+// depending on the setting of dec.useNumber.
 func (dec *Decoder) convertNumber(s string) (interface{}, error) {
 	if dec.useNumber {
 		return Number(s), nil
@@ -796,6 +773,7 @@ func (dec *Decoder) convertNumber(s string) (interface{}, error) {
 	return f, nil
 }
 
+// convertNumber2Float64 converts number literals in v recursively.
 func (dec *Decoder) convertNumber2Float64(v interface{}) (interface{}, error) {
 	switch v := v.(type) {
 	case Number:
@@ -822,6 +800,86 @@ func (dec *Decoder) convertNumber2Float64(v interface{}) (interface{}, error) {
 		}
 	}
 	return v, nil
+}
+
+// parse numbers as interger values.
+func parseInt(s string, t reflect.Type) (int64, error) {
+	n, err := strconv.ParseInt(s, 10, 64)
+	if err == nil {
+		if reflect.Zero(t).OverflowInt(n) {
+			return 0, errors.New("overflow")
+		}
+		return n, nil
+	}
+
+	// PHP flavored http://php.net/manual/en/language.types.integer.php#language.types.integer.casting
+	// convert floating point numbers to integer
+	if t.Kind() == reflect.Int64 {
+		// Go's built-in float64 doesn't have enough precision
+		// to present int64 values.
+		// so we use math/big.Float here.
+		f, _, err := big.ParseFloat(s, 10, 64, big.ToZero)
+		if err != nil {
+			return 0, err
+		}
+		n, acc := f.Int64()
+		if acc != big.Exact {
+			return 0, errors.New("overflow")
+		}
+		return n, nil
+	}
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0, err
+	}
+	if f < math.MinInt64 || f > math.MaxInt64 {
+		return 0, errors.New("overflow")
+	}
+	n = int64(f)
+	if reflect.Zero(t).OverflowInt(n) {
+		return 0, errors.New("overflow")
+	}
+	return n, nil
+}
+
+// parse numbers as unsigned interger values.
+func parseUint(s string, t reflect.Type) (uint64, error) {
+	n, err := strconv.ParseUint(s, 10, 64)
+	if err == nil {
+		if reflect.Zero(t).OverflowUint(n) {
+			return 0, errors.New("overflow")
+		}
+		return n, nil
+	}
+
+	// PHP flavored http://php.net/manual/en/language.types.integer.php#language.types.integer.casting
+	// convert floating point numbers to integer
+	if t.Kind() == reflect.Uint64 {
+		// Go's built-in float64 doesn't have enough precision
+		// to present int64 values.
+		// so we use math/big.Float here.
+		f, _, err := big.ParseFloat(s, 10, 64, big.ToZero)
+		if err != nil {
+			return 0, err
+		}
+		n, acc := f.Uint64()
+		if acc != big.Exact {
+			return 0, errors.New("overflow")
+		}
+		return n, nil
+	}
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0, err
+	}
+	if f < 0 || f > math.MaxUint64 {
+		return 0, errors.New("overflow")
+	}
+	n = uint64(f)
+	if reflect.Zero(t).OverflowUint(n) {
+		return 0, errors.New("overflow")
+	}
+	return n, nil
 }
 
 // DisallowUnknownFields causes the Decoder to return an error
