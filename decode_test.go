@@ -870,6 +870,14 @@ var unmarshalTests = []unmarshalTest{
 	{in: `false`, ptr: new(int), out: 0},
 	{in: `""`, ptr: new(int), out: int(0)},
 
+	// convert to unsigned integer
+	{in: `"1"`, ptr: new(uint), out: uint(1)},
+	{in: `"1.1"`, ptr: new(uint), out: uint(1)},
+	{in: `1.1`, ptr: new(uint), out: uint(1)},
+	{in: `true`, ptr: new(uint), out: uint(1)},
+	{in: `false`, ptr: new(uint), out: uint(0)},
+	{in: `""`, ptr: new(uint), out: uint(0)},
+
 	// convert to floats
 	{in: `"1"`, ptr: new(float64), out: float64(1)},
 	{in: `"1.1"`, ptr: new(float64), out: 1.1},
@@ -903,6 +911,64 @@ var unmarshalTests = []unmarshalTest{
 	{in: `[1]`, ptr: new(phpArray), out: phpArray{First: "1"}},
 	{in: `[1.1]`, ptr: new(phpArray), out: phpArray{First: "1.1"}},
 	{in: `["foo"]`, ptr: new(phpArray), out: phpArray{First: "foo"}},
+
+	// overflow
+	{
+		in:  fmt.Sprintf("%d", math.MaxInt32),
+		ptr: new(int32),
+		out: int32(math.MaxInt32),
+	},
+	{
+		in:  fmt.Sprintf("%d", math.MaxInt32+1),
+		ptr: new(int32),
+		err: &UnmarshalTypeError{
+			Value: fmt.Sprintf("number %d", math.MaxInt32+1),
+			Type:  reflect.TypeOf(int32(0)),
+		},
+	},
+
+	{
+		in:  fmt.Sprintf("%d", math.MaxInt64),
+		ptr: new(int64),
+		out: int64(math.MaxInt64),
+	},
+	{
+		in:  fmt.Sprintf("%d", uint64(math.MaxInt64+1)),
+		ptr: new(int64),
+		out: int64(0),
+		err: &UnmarshalTypeError{
+			Value: fmt.Sprintf("number %d", uint64(math.MaxInt64+1)),
+			Type:  reflect.TypeOf(int64(0)),
+		},
+	},
+
+	{
+		in:  fmt.Sprintf("%.10e", float64(math.MaxInt32)),
+		ptr: new(int32),
+		out: int32(math.MaxInt32),
+	},
+	{
+		in:  fmt.Sprintf("%.10e", float64(math.MaxInt32+1)),
+		ptr: new(int32),
+		err: &UnmarshalTypeError{
+			Value: fmt.Sprintf("number %.10e", float64(math.MaxInt32+1)),
+			Type:  reflect.TypeOf(int32(0)),
+		},
+	},
+
+	{
+		in:  new(big.Float).SetInt64(math.MaxInt64).Text('e', 20),
+		ptr: new(int64),
+		out: int64(math.MaxInt64),
+	},
+	{
+		in:  new(big.Float).Add(new(big.Float).SetInt64(math.MaxInt64), big.NewFloat(1)).Text('e', 20),
+		ptr: new(int64),
+		err: &UnmarshalTypeError{
+			Value: fmt.Sprintf("number %s", new(big.Float).Add(new(big.Float).SetInt64(math.MaxInt64), big.NewFloat(1)).Text('e', 20)),
+			Type:  reflect.TypeOf(int64(0)),
+		},
+	},
 }
 
 func TestUnmarshal(t *testing.T) {
