@@ -953,7 +953,7 @@ var unmarshalTests = []unmarshalTest{
 	},
 	{
 		in:  `[]`,
-		ptr: new(interface{}),
+		ptr: new(interface{ Foo() }),
 		err: &UnmarshalTypeError{
 			Value: "array",
 			Type:  reflect.TypeOf((*interface{ Foo() })(nil)).Elem(),
