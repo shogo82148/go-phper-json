@@ -969,6 +969,62 @@ var unmarshalTests = []unmarshalTest{
 			Type:  reflect.TypeOf(int64(0)),
 		},
 	},
+
+	{
+		in:  fmt.Sprintf("%d", int64(math.MaxUint32)),
+		ptr: new(uint32),
+		out: uint32(math.MaxUint32),
+	},
+	{
+		in:  fmt.Sprintf("%d", int64(math.MaxUint32)+1),
+		ptr: new(uint32),
+		err: &UnmarshalTypeError{
+			Value: fmt.Sprintf("number %d", math.MaxUint32+1),
+			Type:  reflect.TypeOf(uint32(0)),
+		},
+	},
+
+	{
+		in:  fmt.Sprintf("%d", uint64(math.MaxUint64)),
+		ptr: new(uint64),
+		out: uint64(math.MaxUint64),
+	},
+	{
+		in:  new(big.Float).Add(new(big.Float).SetUint64(math.MaxUint64), big.NewFloat(1)).Text('f', 0),
+		ptr: new(uint64),
+		err: &UnmarshalTypeError{
+			Value: fmt.Sprintf("number %s", new(big.Float).Add(new(big.Float).SetUint64(math.MaxUint64), big.NewFloat(1)).Text('f', 0)),
+			Type:  reflect.TypeOf(uint64(0)),
+		},
+	},
+
+	{
+		in:  fmt.Sprintf("%.10e", float64(math.MaxUint32)),
+		ptr: new(uint32),
+		out: uint32(math.MaxUint32),
+	},
+	{
+		in:  fmt.Sprintf("%.10e", float64(math.MaxUint32)+1),
+		ptr: new(uint32),
+		err: &UnmarshalTypeError{
+			Value: fmt.Sprintf("number %.10e", float64(math.MaxUint32)+1),
+			Type:  reflect.TypeOf(uint32(0)),
+		},
+	},
+
+	{
+		in:  new(big.Float).SetUint64(math.MaxUint64).Text('e', 20),
+		ptr: new(uint64),
+		out: uint64(math.MaxUint64),
+	},
+	{
+		in:  new(big.Float).Add(new(big.Float).SetUint64(math.MaxUint64), big.NewFloat(1)).Text('e', 20),
+		ptr: new(uint64),
+		err: &UnmarshalTypeError{
+			Value: fmt.Sprintf("number %s", new(big.Float).Add(new(big.Float).SetUint64(math.MaxUint64), big.NewFloat(1)).Text('e', 20)),
+			Type:  reflect.TypeOf(uint64(0)),
+		},
+	},
 }
 
 func TestUnmarshal(t *testing.T) {
