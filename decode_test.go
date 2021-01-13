@@ -912,6 +912,54 @@ var unmarshalTests = []unmarshalTest{
 	{in: `[1.1]`, ptr: new(phpArray), out: phpArray{First: "1.1"}},
 	{in: `["foo"]`, ptr: new(phpArray), out: phpArray{First: "foo"}},
 
+	// convert to interface{}
+	{in: `true`, ptr: new(interface{}), out: true},
+	{in: `1`, ptr: new(interface{}), out: 1.0},
+	{in: `"foo"`, ptr: new(interface{}), out: "foo"},
+	{in: `{}`, ptr: new(interface{}), out: map[string]interface{}{}},
+	{in: `[]`, ptr: new(interface{}), out: []interface{}{}},
+
+	{
+		in:  `true`,
+		ptr: new(interface{ Foo() }),
+		err: &UnmarshalTypeError{
+			Value: "bool",
+			Type:  reflect.TypeOf((*interface{ Foo() })(nil)).Elem(),
+		},
+	},
+	{
+		in:  `1`,
+		ptr: new(interface{ Foo() }),
+		err: &UnmarshalTypeError{
+			Value: "number",
+			Type:  reflect.TypeOf((*interface{ Foo() })(nil)).Elem(),
+		},
+	},
+	{
+		in:  `"foo"`,
+		ptr: new(interface{ Foo() }),
+		err: &UnmarshalTypeError{
+			Value: "string",
+			Type:  reflect.TypeOf((*interface{ Foo() })(nil)).Elem(),
+		},
+	},
+	{
+		in:  `{}`,
+		ptr: new(interface{ Foo() }),
+		err: &UnmarshalTypeError{
+			Value: "object",
+			Type:  reflect.TypeOf((*interface{ Foo() })(nil)).Elem(),
+		},
+	},
+	{
+		in:  `[]`,
+		ptr: new(interface{}),
+		err: &UnmarshalTypeError{
+			Value: "array",
+			Type:  reflect.TypeOf((*interface{ Foo() })(nil)).Elem(),
+		},
+	},
+
 	// overflow
 	{
 		in:  fmt.Sprintf("%d", math.MaxInt32),
