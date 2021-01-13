@@ -334,6 +334,9 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 		case reflect.String:
 			out.SetString(v)
 		case reflect.Interface:
+			if out.NumMethod() != 0 {
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "string", Type: out.Type()})
+			}
 			out.Set(reflect.ValueOf(v))
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			if v == "" {
