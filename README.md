@@ -16,9 +16,9 @@ It is use for decoding PHP-encoded JSON with JSON_FORCE_OBJECT option.
 ```go
 func ExampleUnmarshal() {
 	var jsonBlob = []byte(`[
-	{"Name": "Platypus", "Order": "Monotremata"},
-	{"Name": "Quoll",    "Order": "Dasyuromorphia"}
-]`)
+		{"Name": "Platypus", "Order": "Monotremata"},
+		{"Name": "Quoll",    "Order": "Dasyuromorphia"}
+	]`)
 	type Animal struct {
 		Name  string
 		Order string
@@ -33,9 +33,9 @@ func ExampleUnmarshal() {
 
 	// JSON encoded by PHP with JSON_FORCE_OBJECT option.
 	var phpJSONBlob = []byte(`{
-	"0": {"Name": "Platypus", "Order": "Monotremata"},
-	"1": {"Name": "Quoll",    "Order": "Dasyuromorphia"}
-}`)
+		"0": {"Name": "Platypus", "Order": "Monotremata"},
+		"1": {"Name": "Quoll",    "Order": "Dasyuromorphia"}
+	}`)
 	var animals2 []Animal
 	if err := phperjson.Unmarshal(phpJSONBlob, &animals2); err != nil {
 		fmt.Println("error:", err)
@@ -60,10 +60,10 @@ See http://php.net/manual/en/language.types.type-juggling.php for more detail.
 ```go
 func ExampleUnmarshal_typeJaggling() {
 	var jsonBlob = []byte(`{
-	"R": 98,
-	"G": "218",
-	"B": 255.0
-}`)
+		"R": 98,
+		"G": "218",
+		"B": 255.0
+	}`)
 	type RGB struct {
 		R uint8
 		G uint8
@@ -84,22 +84,23 @@ func ExampleUnmarshal_typeJaggling() {
 ## Benchmark
 
 ```
+$ go version
+go version go1.17 darwin/amd64
 $ go test -bench . -benchmem
 goos: darwin
 goarch: amd64
 pkg: github.com/shogo82148/go-phper-json
-BenchmarkUnicodeDecoder/json-4           5000000               274 ns/op          51.04 MB/s          36 B/op          2 allocs/op
-BenchmarkUnicodeDecoder/phper-json-4     3000000               432 ns/op          32.36 MB/s          68 B/op          4 allocs/op
-BenchmarkCodeUnmarshal/json-4                100          20498031 ns/op          94.67 MB/s     3274027 B/op      92663 allocs/op
-BenchmarkCodeUnmarshal/phper-json-4           30          38771577 ns/op          50.05 MB/s    16434644 B/op     566562 allocs/op
-BenchmarkUnmarshalString/json-4         10000000               181 ns/op             176 B/op          2 allocs/op
-BenchmarkUnmarshalString/phper-json-4    2000000              1034 ns/op            2672 B/op          9 allocs/op
-BenchmarkUnmarshalFloat64/json-4        10000000               163 ns/op             164 B/op          2 allocs/op
-BenchmarkUnmarshalFloat64/phper-json-4   1000000              1120 ns/op            2660 B/op          9 allocs/op
-BenchmarkUnmarshalInt64/json-4          10000000               124 ns/op             160 B/op          1 allocs/op
-BenchmarkUnmarshalInt64/phper-json-4     2000000               983 ns/op            2656 B/op          8 allocs/op
-BenchmarkUnmapped/json-4                 2000000               617 ns/op             216 B/op          4 allocs/op
-BenchmarkUnmapped/phper-json-4            500000              2321 ns/op            2528 B/op         33 allocs/op
-PASS
-ok      github.com/shogo82148/go-phper-json     23.683s
+cpu: Intel(R) Core(TM) i7-1068NG7 CPU @ 2.30GHz
+BenchmarkUnicodeDecoder/json-8           5667753               212.0 ns/op        66.04 MB/s          28 B/op          2 allocs/op
+BenchmarkUnicodeDecoder/phper-json-8     3428779               349.4 ns/op        40.07 MB/s          60 B/op          4 allocs/op
+BenchmarkCodeUnmarshal/json-8                141           8093536 ns/op         239.76 MB/s     3045352 B/op      92670 allocs/op
+BenchmarkCodeUnmarshal/phper-json-8           70          16798590 ns/op         115.51 MB/s    16109564 B/op     566553 allocs/op
+BenchmarkUnmarshalString/json-8         13276536                87.99 ns/op          160 B/op          2 allocs/op
+BenchmarkUnmarshalString/phper-json-8    2155824               538.7 ns/op          2464 B/op          7 allocs/op
+BenchmarkUnmarshalFloat64/json-8        14083710                87.76 ns/op          148 B/op          2 allocs/op
+BenchmarkUnmarshalFloat64/phper-json-8   1970341               543.4 ns/op          2452 B/op          7 allocs/op
+BenchmarkUnmarshalInt64/json-8          17226661                69.99 ns/op          144 B/op          1 allocs/op
+BenchmarkUnmarshalInt64/phper-json-8     1932265               620.2 ns/op          2448 B/op          6 allocs/op
+BenchmarkUnmapped/json-8                 4018314               290.5 ns/op           200 B/op          4 allocs/op
+BenchmarkUnmapped/phper-json-8            963920              1194 ns/op            2256 B/op         28 allocs/op
 ```
