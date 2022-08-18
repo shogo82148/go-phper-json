@@ -920,7 +920,7 @@ func (dec *Decoder) UseNumber() {
 // The key of the object is interpreted as an index of the slice.
 // It is use for decoding PHP-encoded JSON with JSON_FORCE_OBJECT option.
 //
-// And more, you can use ``Type Juggling'' of PHP.
+// And more, you can use “Type Juggling” of PHP.
 // For example, phperjson.Unmarshal can unmashal a JSON string into int,
 // if the string can be parsed as number.
 // See http://php.net/manual/en/language.types.type-juggling.php for more detail.
