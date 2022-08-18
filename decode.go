@@ -471,7 +471,7 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			}
 		case reflect.Map:
 			// PHP flavored
-			// PHP doesn's not distinguish JSON arrays from JSON objects.
+			// PHP doesn't not distinguish JSON arrays from JSON objects.
 			t := out.Type()
 			kt := t.Key()
 			// Map key must either have string kind, have an integer kind,
@@ -533,7 +533,7 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			}
 		case reflect.Struct:
 			// PHP flavored
-			// PHP doesn's not distinguish JSON arrays from JSON objects.
+			// PHP doesn't not distinguish JSON arrays from JSON objects.
 			for i, value := range v {
 				// Figure out field corresponding to key.
 				key := strconv.Itoa(i)
@@ -805,7 +805,7 @@ func (dec *Decoder) convertNumber2Float64(v interface{}) (interface{}, error) {
 	return v, nil
 }
 
-// parse numbers as interger values.
+// parse numbers as integer values.
 func parseInt(s string, t reflect.Type) (int64, error) {
 	n, err := strconv.ParseInt(s, 10, 64)
 	if err == nil {
@@ -845,7 +845,7 @@ func parseInt(s string, t reflect.Type) (int64, error) {
 	return n, nil
 }
 
-// parse numbers as unsigned interger values.
+// parse numbers as unsigned integer values.
 func parseUint(s string, t reflect.Type) (uint64, error) {
 	n, err := strconv.ParseUint(s, 10, 64)
 	if err == nil {
@@ -912,16 +912,16 @@ func (dec *Decoder) UseNumber() {
 // in the value pointed to by v. If v is nil or not a pointer,
 // Unmarshal returns an InvalidUnmarshalError.
 //
-// phperjson.Unmashal works in the same way as json.Unmashal,
+// phperjson.Unmarshal works in the same way as json.Unmarshal,
 // but it is useful for dealing with PHP-encoded JSON.
 // http://php.net/manual/en/function.json-encode.php
 //
-// Unlike json.Unmarshal, phperjson.Unmarshal can unmashal a JSON object into a slice.
+// Unlike json.Unmarshal, phperjson.Unmarshal can unmarshal a JSON object into a slice.
 // The key of the object is interpreted as an index of the slice.
 // It is use for decoding PHP-encoded JSON with JSON_FORCE_OBJECT option.
 //
 // And more, you can use “Type Juggling” of PHP.
-// For example, phperjson.Unmarshal can unmashal a JSON string into int,
+// For example, phperjson.Unmarshal can unmarshal a JSON string into int,
 // if the string can be parsed as number.
 // See http://php.net/manual/en/language.types.type-juggling.php for more detail.
 func Unmarshal(data []byte, v interface{}) error {
