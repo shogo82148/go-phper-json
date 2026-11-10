@@ -377,6 +377,11 @@ type phpArray struct {
 	First string `json:"0"`
 }
 
+// A type for test php array into a slice field.
+type sliceField struct {
+	Tags []string
+}
+
 type unmarshalTest struct {
 	in                    string
 	ptr                   interface{}
@@ -893,6 +898,21 @@ var unmarshalTests = []unmarshalTest{
 	{in: `"foo"`, ptr: new([]string), out: []string{"foo"}},
 	{in: `{}`, ptr: new([]interface{}), out: []interface{}{}},
 	{in: `{"1":1}`, ptr: new([]int), out: []int{0, 1}},
+	{
+		in:  `{"-1":1}`,
+		ptr: new([]int),
+		err: &UnmarshalTypeError{Value: "number -1", Type: reflect.TypeOf([]int{})},
+	},
+	{
+		in:  `{"0":0,"-1":1}`,
+		ptr: new([]int),
+		err: &UnmarshalTypeError{Value: "number -1", Type: reflect.TypeOf([]int{})},
+	},
+	{
+		in:  `{"Tags":{"-1":"x"}}`,
+		ptr: new(sliceField),
+		err: &UnmarshalTypeError{Value: "number -1", Type: reflect.TypeOf([]string{}), Struct: "sliceField", Field: "Tags"},
+	},
 	{in: `{"1":1,"3":3}`, ptr: new([3]int), out: [3]int{0, 1, 0}},
 	{in: `true`, ptr: new(map[string]bool), out: map[string]bool{"0": true}},
 	{in: `1`, ptr: new(map[string]int), out: map[string]int{"0": 1}},
