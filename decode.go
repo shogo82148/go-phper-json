@@ -714,6 +714,10 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				if err != nil {
 					return dec.withErrorContext(&UnmarshalTypeError{Value: "number", Type: reflect.TypeOf("")})
 				}
+				if i < 0 {
+					// negative keys cannot be used as slice indexes.
+					return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + key, Type: out.Type()})
+				}
 				if int(i) > max {
 					max = int(i)
 				}
