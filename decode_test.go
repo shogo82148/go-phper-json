@@ -1804,6 +1804,95 @@ func TestPrefilled(t *testing.T) {
 	}
 }
 
+func TestUnmarshalSliceMaxIntKey(t *testing.T) {
+	maxIntKey := strconv.Itoa(int(^uint(0) >> 1))
+
+	t.Run("nil slice", func(t *testing.T) {
+		var s []int
+		err := Unmarshal([]byte(`{"`+maxIntKey+`":0}`), &s)
+		if err == nil {
+			t.Fatal("Unmarshal expecting error, got nil")
+		}
+		terr, ok := err.(*UnmarshalTypeError)
+		if !ok {
+			t.Fatalf("want *UnmarshalTypeError, got %T: %v", err, err)
+		}
+		if want := "number " + maxIntKey; terr.Value != want {
+			t.Errorf("Value = %q, want %q", terr.Value, want)
+		}
+		if want := reflect.TypeOf([]int{}); terr.Type != want {
+			t.Errorf("Type = %v, want %v", terr.Type, want)
+		}
+		if s != nil {
+			t.Errorf("slice = %v, want nil", s)
+		}
+	})
+
+	t.Run("struct field", func(t *testing.T) {
+		var v struct {
+			Items []int
+		}
+		err := Unmarshal([]byte(`{"Items":{"`+maxIntKey+`":0}}`), &v)
+		if err == nil {
+			t.Fatal("Unmarshal expecting error, got nil")
+		}
+		terr, ok := err.(*UnmarshalTypeError)
+		if !ok {
+			t.Fatalf("want *UnmarshalTypeError, got %T: %v", err, err)
+		}
+		if terr.Field != "Items" {
+			t.Errorf("Field = %q, want %q", terr.Field, "Items")
+		}
+		if v.Items != nil {
+			t.Errorf("Items = %v, want nil", v.Items)
+		}
+	})
+
+	t.Run("prefilled slice", func(t *testing.T) {
+		s := []int{1, 2, 3}
+		err := Unmarshal([]byte(`{"`+maxIntKey+`":0}`), &s)
+		if err == nil {
+			t.Fatal("Unmarshal expecting error, got nil")
+		}
+		if _, ok := err.(*UnmarshalTypeError); !ok {
+			t.Fatalf("want *UnmarshalTypeError, got %T: %v", err, err)
+		}
+		if want := []int{1, 2, 3}; !reflect.DeepEqual(s, want) {
+			t.Errorf("slice = %v, want %v", s, want)
+		}
+	})
+}
+
+func TestUnmarshalSliceReuseCapacity(t *testing.T) {
+	t.Run("len < max+1 <= cap", func(t *testing.T) {
+		backing := []int{7, 8, 9}
+		s := backing[:1]
+		if err := Unmarshal([]byte(`{"2":5}`), &s); err != nil {
+			t.Fatalf("Unmarshal: %v", err)
+		}
+		if want := []int{0, 0, 5}; !reflect.DeepEqual(s, want) {
+			t.Errorf("slice = %v, want %v", s, want)
+		}
+		if &s[0] != &backing[0] {
+			t.Error("slice was reallocated, want backing array reused")
+		}
+	})
+
+	t.Run("len >= max+1", func(t *testing.T) {
+		backing := []int{7, 8, 9}
+		s := backing[:3]
+		if err := Unmarshal([]byte(`{"1":5}`), &s); err != nil {
+			t.Fatalf("Unmarshal: %v", err)
+		}
+		if want := []int{0, 5}; !reflect.DeepEqual(s, want) {
+			t.Errorf("slice = %v, want %v", s, want)
+		}
+		if &s[0] != &backing[0] {
+			t.Error("slice was reallocated, want backing array reused")
+		}
+	})
+}
+
 var invalidUnmarshalTests = []struct {
 	v    interface{}
 	want string
