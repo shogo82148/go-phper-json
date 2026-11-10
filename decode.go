@@ -753,7 +753,7 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				if err != nil {
 					return dec.withErrorContext(&UnmarshalTypeError{Value: "number", Type: reflect.TypeOf("")})
 				}
-				if int(i) >= out.Len() {
+				if i < 0 || int(i) >= out.Len() {
 					continue
 				}
 				if err := dec.decode(vv, out.Index(int(i))); err != nil {
