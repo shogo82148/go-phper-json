@@ -708,6 +708,7 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 		case reflect.Slice:
 			// PHP flavored http://php.net/manual/en/language.types.array.php#language.types.array.casting
 			// check all keys are number, and find the max key.
+			const maxInt = int(^uint(0) >> 1)
 			max := -1
 			for key := range v {
 				i, err := strconv.ParseInt(key, 10, 0)
@@ -716,6 +717,10 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				}
 				if i < 0 {
 					// negative keys cannot be used as slice indexes.
+					return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + key, Type: out.Type()})
+				}
+				if int(i) == maxInt {
+					// max+1 would overflow int.
 					return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + key, Type: out.Type()})
 				}
 				if int(i) > max {
@@ -727,13 +732,13 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				newout := reflect.MakeSlice(out.Type(), max+1, max+1)
 				out.Set(newout)
 			} else {
+				out.SetLen(max + 1)
 				// fill zero
 				zero := reflect.Zero(out.Type().Elem())
 				for i := 0; i <= max; i++ {
 					out.Index(i).Set(zero)
 				}
 			}
-			out.SetLen(max + 1)
 			for key, vv := range v {
 				i, _ := strconv.ParseInt(key, 10, 0) // err has been already checked, so no need to check here.
 				if err := dec.decode(vv, out.Index(int(i))); err != nil {
